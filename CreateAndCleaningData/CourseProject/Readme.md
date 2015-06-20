@@ -5,11 +5,10 @@ This document serves as detailed description of how scripts should be used in or
 
 ## Step I - Read in the run_analysis.R script
 
-This script contains the body of analysis. While reading in to R, by default it sets the working directory to a predefined folder, cleans up the environments (remove pre-loaded variables, functions, etc) and loads ```dplyr``` & ```pylr``` libraries as they will be used in later steps. 
+This script contains the body of analysis. While reading in to R, by default it cleans up the environments (remove pre-loaded variables, functions, etc) and loads ```dplyr``` & ```pylr``` libraries as they will be used in later steps. 
 
 **Note: Running script requires ```dplyr``` & ```plyr``` packages installed on your local computer!**
 ```{r}
-setwd("/Users/ati/GitHub/datasciencecoursera/CreateAndCleaningData/CourseProject")
 rm(list=ls())
 library(dplyr, plyr)
 ```
