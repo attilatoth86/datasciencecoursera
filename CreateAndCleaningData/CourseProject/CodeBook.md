@@ -31,7 +31,76 @@ The ultimate source of processed data is available [here](https://d396qusza40orc
 During processing, original dataset has been stripped in order to contain only measures that have something to do with mean & standard deviation. Afterwards, this stripped dataset was grouped by subject & activity and calculated average for selected measures.
 
 ## Description of variables
-
+|Column Id|Column Name|Variable Description|
+| ------------- |-------------| -----|
+|1|Subject|An identifier of the subject who carried out the experiment.|
+|2|ActivityName|Activities performed during the experiment|
+|3|fBodyAccmeanX|Averaged mean of frequency domain body acceleration signals measured by accelerometer on axis X|
+|4|fBodyAccmeanY|Averaged mean of frequency domain body acceleration signals measured by accelerometer on axis Y|
+|5|fBodyAccmeanZ|Averaged mean of frequency domain body acceleration signals measured by accelerometer on axis Z|
+|6|fBodyAccstdX|Averaged standard deviation offrequency domain body acceleration signals measured by accelerometer on axis X|
+|7|fBodyAccstdY|Averaged standard deviation offrequency domain body acceleration signals measured by accelerometer on axis Y|
+|8|fBodyAccstdZ|Averaged standard deviation offrequency domain body acceleration signals measured by accelerometer on axis Z|
+|9|fBodyAccJerkmeanX|Averaged mean of frequency domain body acceleration Jerk signals measured by accelerometer on axis X|
+|10|fBodyAccJerkmeanY|Averaged mean of frequency domain body acceleration Jerk signals measured by accelerometer on axis Y|
+|11|fBodyAccJerkmeanZ|Averaged mean of frequency domain body acceleration Jerk signals measured by accelerometer on axis Z|
+|12|fBodyAccJerkstdX|Averaged standard deviation offrequency domain body acceleration Jerk signals measured by accelerometer on axis X|
+|13|fBodyAccJerkstdY|Averaged standard deviation offrequency domain body acceleration Jerk signals measured by accelerometer on axis Y|
+|14|fBodyAccJerkstdZ|Averaged standard deviation offrequency domain body acceleration Jerk signals measured by accelerometer on axis Z|
+|15|fBodyAccMagmean|Averaged mean of frequency domain body acceleration signal magnitudes measured by accelerometer |
+|16|fBodyAccMagstd|Averaged standard deviation offrequency domain body acceleration signal magnitudes measured by accelerometer |
+|17|fBodyBodyAccJerkMagmean|Averaged mean of frequency domain body acceleration Jerk signal magnitudes measured by accelerometer |
+|18|fBodyBodyAccJerkMagstd|Averaged standard deviation offrequency domain body acceleration Jerk signal magnitudes measured by accelerometer |
+|19|fBodyBodyGyroJerkMagmean|Averaged mean of frequency domain body Jerk signal magnitudes measured by gyroscope |
+|20|fBodyBodyGyroJerkMagstd|Averaged standard deviation offrequency domain body Jerk signal magnitudes measured by gyroscope |
+|21|fBodyBodyGyroMagmean|Averaged mean of frequency domain body signal magnitudes measured by gyroscope |
+|22|fBodyBodyGyroMagstd|Averaged standard deviation offrequency domain body signal magnitudes measured by gyroscope |
+|23|fBodyGyromeanX|Averaged mean of frequency domain body signals measured by gyroscope on axis X|
+|24|fBodyGyromeanY|Averaged mean of frequency domain body signals measured by gyroscope on axis Y|
+|25|fBodyGyromeanZ|Averaged mean of frequency domain body signals measured by gyroscope on axis Z|
+|26|fBodyGyrostdX|Averaged standard deviation offrequency domain body signals measured by gyroscope on axis X|
+|27|fBodyGyrostdY|Averaged standard deviation offrequency domain body signals measured by gyroscope on axis Y|
+|28|fBodyGyrostdZ|Averaged standard deviation offrequency domain body signals measured by gyroscope on axis Z|
+|29|tBodyAccmeanX|Averaged mean of time domain body acceleration signals measured by accelerometer on axis X|
+|30|tBodyAccmeanY|Averaged mean of time domain body acceleration signals measured by accelerometer on axis Y|
+|31|tBodyAccmeanZ|Averaged mean of time domain body acceleration signals measured by accelerometer on axis Z|
+|32|tBodyAccstdX|Averaged standard deviation oftime domain body acceleration signals measured by accelerometer on axis X|
+|33|tBodyAccstdY|Averaged standard deviation oftime domain body acceleration signals measured by accelerometer on axis Y|
+|34|tBodyAccstdZ|Averaged standard deviation oftime domain body acceleration signals measured by accelerometer on axis Z|
+|35|tBodyAccJerkmeanX|Averaged mean of time domain body acceleration Jerk signals measured by accelerometer on axis X|
+|36|tBodyAccJerkmeanY|Averaged mean of time domain body acceleration Jerk signals measured by accelerometer on axis Y|
+|37|tBodyAccJerkmeanZ|Averaged mean of time domain body acceleration Jerk signals measured by accelerometer on axis Z|
+|38|tBodyAccJerkstdX|Averaged standard deviation oftime domain body acceleration Jerk signals measured by accelerometer on axis X|
+|39|tBodyAccJerkstdY|Averaged standard deviation oftime domain body acceleration Jerk signals measured by accelerometer on axis Y|
+|40|tBodyAccJerkstdZ|Averaged standard deviation oftime domain body acceleration Jerk signals measured by accelerometer on axis Z|
+|41|tBodyAccJerkMagmean|Averaged mean of time domain body acceleration Jerk signal magnitudes measured by accelerometer |
+|42|tBodyAccJerkMagstd|Averaged standard deviation oftime domain body acceleration Jerk signal magnitudes measured by accelerometer |
+|43|tBodyAccMagmean|Averaged mean of time domain body acceleration signal magnitudes measured by accelerometer |
+|44|tBodyAccMagstd|Averaged standard deviation oftime domain body acceleration signal magnitudes measured by accelerometer |
+|45|tBodyGyromeanX|Averaged mean of time domain body signals measured by gyroscope on axis X|
+|46|tBodyGyromeanY|Averaged mean of time domain body acceleration signals by gyroscope on axis Y|
+|47|tBodyGyromeanZ|Averaged mean of time domain body acceleration signals by gyroscope on axis Z|
+|48|tBodyGyrostdX|Averaged standard deviation oftime domain body acceleration signals by gyroscope on axis X|
+|49|tBodyGyrostdY|Averaged standard deviation oftime domain body acceleration signals by gyroscope on axis Y|
+|50|tBodyGyrostdZ|Averaged standard deviation oftime domain body acceleration signals by gyroscope on axis Z|
+|51|tBodyGyroJerkmeanX|Averaged mean of time domain body acceleration Jerk signals by gyroscope on axis X|
+|52|tBodyGyroJerkmeanY|Averaged mean of time domain body acceleration Jerk signals by gyroscope on axis Y|
+|53|tBodyGyroJerkmeanZ|Averaged mean of time domain body acceleration Jerk signals by gyroscope on axis Z|
+|54|tBodyGyroJerkstdX|Averaged standard deviation oftime domain body acceleration Jerk signals by gyroscope on axis X|
+|55|tBodyGyroJerkstdY|Averaged standard deviation oftime domain body acceleration Jerk signals by gyroscope on axis Y|
+|56|tBodyGyroJerkstdZ|Averaged standard deviation oftime domain body acceleration Jerk signals by gyroscope on axis Z|
+|57|tBodyGyroJerkMagmean|Averaged mean of time domain body acceleration Jerk signal magnitudes by gyroscope |
+|58|tBodyGyroJerkMagstd|Averaged standard deviation oftime domain body acceleration Jerk signal magnitudes by gyroscope |
+|59|tBodyGyroMagmean|Averaged mean of time domain body acceleration signal magnitudes by gyroscope |
+|60|tBodyGyroMagstd|Averaged standard deviation oftime domain body acceleration signal magnitudes by gyroscope |
+|61|tGravityAccmeanX|Averaged mean of time domain gravity acceleration signals by accelerometer on axis X|
+|62|tGravityAccmeanY|Averaged mean of time domain gravity acceleration signals by accelerometer on axis Y|
+|63|tGravityAccmeanZ|Averaged mean of time domain gravity acceleration signals by accelerometer on axis Z|
+|64|tGravityAccstdX|Averaged standard deviation oftime domain gravity acceleration signals by accelerometer on axis X|
+|65|tGravityAccstdY|Averaged standard deviation oftime domain gravity acceleration signals by accelerometer on axis Y|
+|66|tGravityAccstdZ|Averaged standard deviation oftime domain gravity acceleration signals by accelerometer on axis Z|
+|67|tGravityAccMagmean|Averaged mean of time domain gravity acceleration signal magnitudes by accelerometer |
+|68|tGravityAccMagstd|Averaged standard deviation oftime domain gravity acceleration signal magnitudes by accelerometer |
 
 
 ## Description of transformations
@@ -136,4 +205,4 @@ then applied mean function on each measure.
 sum_final_dataset <- summarise_each(gb,funs(mean))
 ```
 
-Content of this sum_final_dataset dataframe is being extracted.
+Content of this ```sum_final_dataset``` dataframe is being extracted.
