@@ -1,6 +1,8 @@
 # CodeBook for Course Project of Getting and Cleaning Data course at [coursera.org](https://www.coursera.org/course/getdata)
 #### author: attila.toth86
 
+This document serves as a detailed description of where data has been obtained from, what it actually contains and what my script does with it.
+
 ## Description of data
 
 The processed data represent data collected from the accelerometers from the Samsung Galaxy S smartphone during an experiment.
