@@ -1,4 +1,3 @@
-setwd("/Users/ati/GitHub/datasciencecoursera/CreateAndCleaningData/CourseProject")
 rm(list=ls())
 library(dplyr, plyr)
 
