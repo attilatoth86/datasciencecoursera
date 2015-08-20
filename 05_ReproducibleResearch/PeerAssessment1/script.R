@@ -25,7 +25,7 @@ avg_steps_intval <- raw_data_nona %>%
 
 plot(x = avg_steps_intval$interval, y = avg_steps_intval$avg_steps, type="l")
 
-arrange(avg_steps_intval, desc(avg_steps))[1,2]
+arrange(avg_steps_intval, desc(avg_steps))[1,1]
 
 length(raw_data[is.na(raw_data$steps),1])
 
@@ -45,8 +45,8 @@ clear_data  <- data_frame(steps = col_replaced_NA,
                           interval = raw_data$interval)
 
 tot_steps_cd <- clear_data %>% 
-    group_by(date) %>% 
-    summarise(total_steps = sum(steps))
+                group_by(date) %>% 
+                summarise(total_steps = sum(steps))
 
 hist(tot_steps_cd$total_steps)
 
@@ -63,3 +63,11 @@ clear_data_w <- cbind(clear_data,
                                                    )
                                                )
                       )
+
+tot_steps_cdw <- clear_data_w %>% 
+                group_by(interval, weekday_weekend) %>% 
+                summarise(total_steps = sum(steps))
+
+library(ggplot2)
+ggplot(tot_steps_cdw, aes(interval, total_steps)) + geom_line() + facet_grid(weekday_weekend ~ .)
+
