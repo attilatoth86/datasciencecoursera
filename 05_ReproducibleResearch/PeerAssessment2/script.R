@@ -1,3 +1,5 @@
+setwd(dir = "GitHub/datasciencecoursera/05_ReproducibleResearch/PeerAssessment2/")
+
 if(!file.exists("StormData.csv.bz2")) {
     download.file(url = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2",
                   destfile = "StormData.csv.bz2", method = "curl")    
@@ -24,11 +26,40 @@ sdata_subset <- data.frame(
                             FATALITIES = stormdata$FATALITIES,
                             INJURIES = stormdata$INJURIES,
                             PROPDMG = stormdata$PROPDMG,
-                            PROPDMGEXP = toupper(as.character(stormdata$PROPDMGEXP)),
+                            PROPDMGEXP = unique(toupper(stormdata$PROPDMGEXP)),
                             CROPDMG = stormdata$CROPDMG,
                             CROPDMGEXP = toupper(as.character(stormdata$CROPDMGEXP)))
 
 str(sdata_subset)
+
+sdata_n <- stormdata %>%
+            filter(
+                !(FATALITIES == 0 &
+                INJURIES == 0 &
+                PROPDMG == 0 &
+                CROPDMG == 0)
+                ) %>%
+            select(EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
+            
+            
+sdata_n  <- stormdata %>%
+                filter(
+                        !(FATALITIES == 0 &
+                        INJURIES == 0 &
+                        PROPDMG == 0 &
+                        CROPDMG == 0)
+                    ) %>%
+                mutate(
+                    PROPDMGUSD = decode(toupper(PROPDMGEXP),
+                                        c("K","M","B","H"),
+                                        c(1000,1000000,1000000000,100),
+                                        1)*PROPDMG,
+                    CROPDMGUSD = decode(toupper(CROPDMGEXP),
+                                        c("K","M","B","H"),
+                                        c(1000,1000000,1000000000,100),
+                                        1)*CROPDMG
+                    ) %>%
+
 
 sdata_subset2 <- sdata_subset[!(sdata_subset$FATALITIES==0 & 
                                     sdata_subset$INJURIES==0 & 
@@ -76,4 +107,6 @@ sdata_clean <- sdata_subset2 %>%
                 select(EVTYPE, FATALITIES, INJURIES, PROPDMGUSD, CROPDMGUSD)
 
 summary(sdata_clean)
+
+pie(evtype_fat_sum$SUM[1:5], labels = evtype_fat_sum$EVTYPE[1:5])
 
