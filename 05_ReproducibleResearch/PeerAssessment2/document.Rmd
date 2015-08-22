@@ -7,7 +7,7 @@ output: html_document
 
 # Synopsis
 
-*This document is created for the "Peer Assessment 2"" assignment in the framework of Reproducible Research online course provided by Johns Hopkins University on Coursera.*
+*This document is created for the "Peer Assessment 2" assignment in the framework of Reproducible Research online course provided by Johns Hopkins University on Coursera.*
 
 Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
 
@@ -44,7 +44,7 @@ if(!file.exists("StormData.csv.bz2")) {
 ```
 
 After downloading I read in the given data from the file archive. read.csv() function can handle bzip files so no preliminary unzipping was required.
-```{r}
+```{r cache=TRUE}
 stormdata <- read.csv("StormData.csv.bz2")
 ```
 
@@ -73,9 +73,11 @@ FATALITIES & INJURIES seem to be numeric variables that indicate the number of r
 summary(stormdata$FATALITIES)
 summary(stormdata$INJURIES)
 
-par(mfrow = c(1,2))
+par(mfrow = c(2,2), mar = c(2,2,2,1))
 hist(stormdata$FATALITIES, main = "Histogram of fatalities", ylim=c(0,80), xlab="")
 hist(stormdata$INJURIES, main = "Histogram of injuries", ylim=c(0,150), xlab="")
+boxplot(stormdata$FATALITIES, main = "Boxplot view of fatalities")
+boxplot(stormdata$INJURIES, main = "Boxplot view of injuries")
 ```
 
 Vast majority of recorded events do not have any effect on human's health.
@@ -84,7 +86,15 @@ PROPDMG (together with PROPDMGEXP) variable somehow refers to the value of prope
 ```{r}
 summary(stormdata$PROPDMG)
 summary(stormdata$CROPDMG)
+
+par(mfrow = c(2,2), mar = c(2,2,2,1))
+hist(stormdata$PROPDMG, main = "Histogram of property damages", xlab="", ylim=c(0,15000))
+hist(stormdata$CROPDMG, main = "Histogram of crop damages", xlab="", ylim=c(0,2000))
+boxplot(stormdata$PROPDMG, main = "Boxplot view of property damages")
+boxplot(stormdata$CROPDMG, main = "Boxplot view of crop damages")
 ```
+
+Similarly to fatalities & injuries, most of recorded events do not have any economic effect.
 
 PROPDMG & CROPDMG are numeric variables but alone they do not say much about damage extent they measure. For appropriate analysis I would need to know the unit that they are measured in. For this PROPDMGEXP & CROPDMGEXP variables seem to be the right choice despite the experienced data quality issues in these columns. Value set for these columns in the database:
 ```{r}
@@ -132,14 +142,13 @@ sdata_n %>% filter(CROPDMG!=0) %>% group_by(CROPDMGEXP) %>% summarise(CNT = n(),
 
 Looking at the frequency & extent of wrong codes, I believe, either exclusion or recoding would not affect my final result significantly, i.e. less the 1% is the occurence of unknown codes in the entire population. Therefore I decided to exclude these items from further analysis.
 
-I translated the codes (H, K, M, B) to numeric format to use them as a multipicator of PROPDMG & CROPDMG variables in order to arrive to PROPDMGUSD & CROPDMGUSD variables that show the damage amount in a unified USD format throughout the entire database. (e.g. PROPDMG = 25, PROPDMGEXP = K -> PROPDMGUSD = 25000) Problematic codes were simply translated to 0 (zero) so their multipicator effect will zero out the correspondent damage values.
+I translated the codes (H, K, M, B) to numeric format to use them as a multipicator of PROPDMG & CROPDMG variables in order to arrive to PROPDMGUSD & CROPDMGUSD variables that show the damage amount in a unified USD format throughout the entire database (e.g. PROPDMG = 25, PROPDMGEXP = K -> PROPDMGUSD = 25000). Problematic codes were simply translated to 0 (zero) so their multipicator effect will zero out the correspondent damage values.
 
 For code translation I made use of *decode* function, created by [flodel](https://gist.github.com/flodel/4470993#file-decode-r).
 
+Function description:
 ```{r}
 decode <- function(x, search, replace, default = NULL) {
-    
-    # build a nested ifelse function by recursion
     decode.fun <- function(search, replace, default = NULL)
         if (length(search) == 0L) {
             function(x) if (is.null(default)) x else rep(default, length(x))
@@ -149,21 +158,42 @@ decode <- function(x, search, replace, default = NULL) {
                                           tail(replace, -1L),
                                           default)(x))
         }
-    
     return(decode.fun(search, replace, default)(x))
 }
+```
 
+Code translation & some date formatting:
+```{r}
 sdata_clean  <- sdata_n %>%
-                mutate(PROPDMGUSD = decode(PROPDMGEXP,
+                mutate(PROPDMGUSD = decode(toupper(PROPDMGEXP),
                                             c("K","M","B","H"),
                                             c(1000,1000000,1000000000,100),
                                             0)*PROPDMG,
-                       CROPDMGUSD = decode(CROPDMGEXP,
+                       CROPDMGUSD = decode(toupper(CROPDMGEXP),
                                             c("K","M","B","H"),
                                             c(1000,1000000,1000000000,100),
-                                            0)*CROPDMG
-                    )
-
+                                            0)*CROPDMG,
+                       PROPDMGEXP = decode(toupper(PROPDMGEXP),
+                                            c("K","M","B","H"),
+                                            c("K","M","B","H"),
+                                            NA),
+                       CROPDMGEXP = decode(toupper(CROPDMGEXP),
+                                            c("K","M","B","H"),
+                                            c("K","M","B","H"),
+                                            NA),
+                       DATE = as.Date(as.character(BGN_DATE),"%m/%d/%Y")
+                    ) %>%
+                select(DATE, 
+                       EVTYPE, 
+                       FATALITIES, 
+                       INJURIES, 
+                       PROPDMG, 
+                       PROPDMGEXP, 
+                       PROPDMGUSD,
+                       CROPDMG,
+                       CROPDMGEXP,
+                       CROPDMGUSD
+                       )
 str(sdata_clean)
 ```
 
@@ -172,45 +202,51 @@ str(sdata_clean)
 ## Most harmful events for population health
 
 ```{r echo=FALSE}
+# Alter number display setup in document
 options(scipen = 7)
 ```
 
-In my analysis I consider those events harmful that resulted any fatality or injury. Since 1950 in `r nrow(sdata_clean[sdata_clean$FATALITIES!=0,])` events were reported that resulted one or more people's death. In these cases a total of `r sum(sdata_clean$FATALITIES)` people deceased.
+In my analysis I consider those events harmful that resulted any fatality or injury. Since 1950 **in `r nrow(sdata_clean[sdata_clean$FATALITIES!=0,])` events** were reported that resulted one or more people's death. In these cases a total of **`r sum(sdata_clean$FATALITIES)` people deceased**. **Injuries** occured more often, **reported `r nrow(sdata_clean[sdata_clean$INJURIES!=0,])` times in which `r sum(sdata_clean$INJURIES)` people were involved.**
 
-Injuries occured more often, reported `r nrow(sdata_clean[sdata_clean$INJURIES!=0,])` times in which `r sum(sdata_clean$INJURIES)` people were involved.
+**Total number of events that have effect on human health counts `r nrow(sdata_clean[(sdata_clean$INJURIES!=0 | sdata_clean$FATALITIES!=0),])` in which `r sum(sdata_clean$FATALITIES) + sum(sdata_clean$INJURIES)` people were involved.**
 
-Total number of events that have effect on human health counts `r nrow(sdata_clean[(sdata_clean$INJURIES!=0 | sdata_clean$FATALITIES!=0),])` in which `r sum(sdata_clean$FATALITIES) + sum(sdata_clean$INJURIES)` people were involved.
+I sumed fatalities & injuries by event type and listed them in a decreasing order of total number of people involved.
 
-I sumed fatalities & injuries by event type and the most harmful proved to be the Tornado.
+Top 10 events with regard to fatalities:
 ```{r}
 evtype_fat_sum <-   sdata_clean %>%
                     group_by(EVTYPE) %>%
                     summarise(TOTAL_FATALITIES=sum(FATALITIES)) %>%
                     mutate(PERCENT = round(100*TOTAL_FATALITIES/sum(TOTAL_FATALITIES),2)) %>%
                     arrange(desc(TOTAL_FATALITIES))
-
 evtype_fat_sum[1:10,]
+```
 
+Top 10 events with regard to injuries:
+```{r}
 evtype_inj_sum <-   sdata_clean %>%
                     group_by(EVTYPE) %>%
                     summarise(TOTAL_INJURIES=sum(INJURIES)) %>%
                     mutate(PERCENT = round(100*TOTAL_INJURIES/sum(TOTAL_INJURIES),2)) %>%
                     arrange(desc(TOTAL_INJURIES))
-
 evtype_inj_sum[1:10,]
 ```
 
+**What clearly seems from these numbers is that tornados can be considered as most dangerous weather events in respect of human health.**
+
 ## Events with greatest economic consequences
 
-In order to answer the question of which weather event has the greatest economic consequences, I needed to create the measurement of economic effect. In my analysis this measure is simply the sum amount of damages occured in properties & crop together.
+In order to answer the question of which weather event has the greatest economic consequences, I needed to create the measurement of economic effect. In my analysis this measure is simply the sum amount of damages occured in properties & crop together. Since 1950, **`r nrow(sdata_clean[sdata_clean$PROPDMGUSD!=0 | sdata_clean$CROPDMGUSD!=0,])` weather events were registered that resulted any economic damage**.
 
-Since 1950, `r nrow(sdata_clean[sdata_clean$PROPDMGUSD!=0 | sdata_clean$CROPDMGUSD!=0,])` weather events were registered that resulted any economic damage.
+If I group the data by event type and sum the total damage (in property & crop) I will get to the conclusion that **floods (followed by hurricanes/typhoons) caused the most significant economic loss.**
 
+Top 10 events in respect of economy damage:
 ```{r}
 sdata_c_eco <-  sdata_clean %>%
                 mutate(TOTAL_DMG_USD = PROPDMGUSD+CROPDMGUSD) %>%
                 group_by(EVTYPE) %>%
                 summarise(TOTDMG = sum(TOTAL_DMG_USD)) %>%
+                mutate(PERCENT = round(100*TOTDMG/sum(TOTDMG),2)) %>%
                 arrange(desc(TOTDMG))
 sdata_c_eco[1:10,]
 ```
