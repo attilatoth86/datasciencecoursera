@@ -78,3 +78,20 @@ Comparing this new distribution to the generated & theoretical population:
 So, the sample mean estimates the original population's mean quite well. As it was expected. The variance of the sample mean is significantly smaller as Central Limit Theorem states it should centralize around the mean in a narrow range.
 
 The figure above presents that the new distribution is approximately normal.
+
+## Basic inferential data analysis
+
+```{r}
+data(ToothGrowth)
+TG <- ToothGrowth
+str(TG)
+
+library(gridExtra)
+plot1 <- ggplot(data = TG, aes(x = dose, y= len)) + geom_point(aes(color=supp))
+plot2 <- ggplot(data = TG, aes(x = factor(dose), y= len)) + facet_grid(.~supp) + geom_boxplot(aes(fill=factor(dose)))
+plot1
+plot2
+#grid.arrange(plot1, plot2, ncol=2, )
+
+
+```
