@@ -1,0 +1,80 @@
+---
+title: "Course Project - Statistical Inference"
+author: "attila.toth86"
+date: "19 Sep 2015"
+output: html_document
+---
+
+This is the project for the statistical inference class. In this, I use simulation to explore inference and do some simple inferential data analysis. The project consists of two parts:
+
+1. A simulation exercise.
+2. Basic inferential data analysis.
+
+# Simulation
+
+In this project I will investigate the exponential distribution in R and compare it with the Central Limit Theorem. 
+
+ - *Mean* of exponential distribution is *1/lambda*
+ - Its *standard deviation* is also *1/lambda*
+
+The exponential distribution can be simulated in R with `rexp(n, lambda)` function, where n represents the number of observations and lambda is the so-called rate parameter. For further analyses, I create a major population of 1 million observation with exponential distribution.
+
+For all simulation I use lambda = 0.2.
+```{r}
+lambda <- 0.2
+```
+
+In order to ensure reproduciblilty, I set a seed.
+```{r}
+set.seed(10000)
+```
+
+Then I create a random exponential population:
+```{r}
+pop <- rexp(n = 10000, rate = lambda)
+hist(pop, 
+     main="Distribution of generated population", 
+     freq=FALSE, 
+     xlab='Population values',
+     breaks=30,
+     col=8)
+curve(dexp(x,lambda), add=TRUE, col=2, lwd=2)
+```
+
+Considering lambda equals to 0.2, literature states that
+
+ - **Theoretical mean of such distribution is `r 1/lambda`,**
+ - **and theoretical standard deviation is also: `r 1/lambda`** (In addition to that: **theoretical variance is then: `r (1/lambda)^2`**)
+
+I investigate the distribution of averages of 40 exponentials by generating 1000 simulation. The code snippet below generates samples of 40 exponentials 1000 times, stores the samples into a 1000x40 data frame called  *sample_matrix*. Then for each row (sample) I calculate the mean and store it into the 41th column.
+```{r}
+no_of_exp <- 40
+no_of_iteration <- 1000
+sample_matrix <- data.frame(
+                            matrix(
+                                sample(pop, size = no_of_exp*no_of_iteration, replace = TRUE),
+                                nrow = no_of_iteration
+                                )
+                            )
+sample_matrix <- cbind(sample_matrix, means=rowMeans(sample_matrix))
+```
+The distribution of averages of the observed exponentials looks like this:
+```{r}
+library(ggplot2)
+ggplot(sample_matrix, aes(x=means)) + geom_histogram(binwidth=0.3, fill="salmon", aes(y=..density..)) + stat_function(fun=dnorm, args=list(mean=mean(sample_matrix$means), sd=sd(sample_matrix$means)))
+
+## add legend! 
+## rename X axis 
+```
+
+Comparing this new distribution to the generated & theoretical population:
+
+|Population|Mean|Standard Deviation|Variance|
+|----------|----|------------------|--------|
+|Theoretical|`r 1/lambda`|`r 1/lambda`|`r (1/lambda)^2`|
+|Simulated population|`r round(mean(pop),2)`|`r round(sd(pop),2)`|`r round(var(pop),2)`|
+|Average of 40 randomly selected set|`r round(mean(sample_matrix$means),2)`|`r round(sd(sample_matrix$means),2)`|`r round(var(sample_matrix$means),2)`|
+
+So, the sample mean estimates the original population's mean quite well. As it was expected. The variance of the sample mean is significantly smaller as Central Limit Theorem states it should centralize around the mean in a narrow range.
+
+The figure above presents that the new distribution is approximately normal.
