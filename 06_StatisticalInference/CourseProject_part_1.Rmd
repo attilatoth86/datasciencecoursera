@@ -1,14 +1,16 @@
 ---
-title: "Course Project - Statistical Inference"
+title: "Simulation - Course Project - Statistical Inference"
 author: "attila.toth86"
-date: "19 Sep 2015"
-output: html_document
+date: "22 Sep 2015"
+output: pdf_document
 ---
 
 This is the project for the statistical inference class. In this, I use simulation to explore inference and do some simple inferential data analysis. The project consists of two parts:
 
 1. A simulation exercise.
 2. Basic inferential data analysis.
+
+This document aims to fulfill requirements of first task.
 
 # Simulation
 
@@ -46,13 +48,13 @@ Considering lambda equals to 0.2, literature states that
  - **Theoretical mean of such distribution is `r 1/lambda`,**
  - **and theoretical standard deviation is also: `r 1/lambda`** (In addition to that: **theoretical variance is then: `r (1/lambda)^2`**)
 
-I investigate the distribution of averages of 40 exponentials by generating 1000 simulation. The code snippet below generates samples of 40 exponentials 1000 times, stores the samples into a 1000x40 data frame called  *sample_matrix*. Then for each row (sample) I calculate the mean and store it into the 41th column.
+I investigate the distribution of averages of 40 exponentials by generating 1000 simulation. The code snippet below generates samples of 40 exponentials 1000 times, stores the samples into a 1000x40 data frame called  `sample_matrix`. Then for each row (sample) I calculate the mean and store it into the 41th column.
 ```{r}
 no_of_exp <- 40
 no_of_iteration <- 1000
 sample_matrix <- data.frame(
                             matrix(
-                                sample(pop, size = no_of_exp*no_of_iteration, replace = TRUE),
+                                sample(pop, no_of_exp*no_of_iteration, replace = TRUE),
                                 nrow = no_of_iteration
                                 )
                             )
@@ -61,7 +63,14 @@ sample_matrix <- cbind(sample_matrix, means=rowMeans(sample_matrix))
 The distribution of averages of the observed exponentials looks like this:
 ```{r}
 library(ggplot2)
-ggplot(sample_matrix, aes(x=means)) + geom_histogram(binwidth=0.3, fill="salmon", aes(y=..density..)) + stat_function(fun=dnorm, args=list(mean=mean(sample_matrix$means), sd=sd(sample_matrix$means)))
+ggplot(sample_matrix, aes(x=means)) + 
+geom_histogram(binwidth=0.3, 
+               fill="salmon", 
+               aes(y=..density..)) + 
+stat_function(fun=dnorm, 
+              args=list(mean=mean(sample_matrix$means), 
+                        sd=sd(sample_matrix$means))
+              )
 
 ## add legend! 
 ## rename X axis 
@@ -78,20 +87,3 @@ Comparing this new distribution to the generated & theoretical population:
 So, the sample mean estimates the original population's mean quite well. As it was expected. The variance of the sample mean is significantly smaller as Central Limit Theorem states it should centralize around the mean in a narrow range.
 
 The figure above presents that the new distribution is approximately normal.
-
-## Basic inferential data analysis
-
-```{r}
-data(ToothGrowth)
-TG <- ToothGrowth
-str(TG)
-
-library(gridExtra)
-plot1 <- ggplot(data = TG, aes(x = dose, y= len)) + geom_point(aes(color=supp))
-plot2 <- ggplot(data = TG, aes(x = factor(dose), y= len)) + facet_grid(.~supp) + geom_boxplot(aes(fill=factor(dose)))
-plot1
-plot2
-#grid.arrange(plot1, plot2, ncol=2, )
-
-
-```
