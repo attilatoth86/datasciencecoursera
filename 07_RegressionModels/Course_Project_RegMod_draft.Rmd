@@ -22,7 +22,7 @@ To be detailed...
 
 Data to be analysed for this exercise reside as a built-in object, called `mtcars`, comes along with any R distribution. Let's take a first look at it:
  
-```{r}
+```{r echo=FALSE}
 str(mtcars)
 ```
 
@@ -47,11 +47,7 @@ From R documentation (`?mtcars`) the following information can be obtained about
 First, I load all the necessary R packages for further analyses:
 
 ```{r message=FALSE}
-library(ggplot2)
-library(reshape)
-library(plyr)
-library(dplyr)
-library(leaps)
+library(ggplot2); library(reshape); library(plyr); library(dplyr); library(leaps);
 ```
 
 Let's take a look at the outcome variable (miles per gallon)
@@ -99,8 +95,26 @@ subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtcars)
 plot(subset)
 ```
 
-
 To be detailed...
+
+# Appendix
+
+# Pointing criteria
+
+Todo:
+
+ - interpret the coefficients
+ - do some exploratory data analyses
+ - fit multiple models and detail their strategy for model selection
+ - answer the questions of interest or detail why the question(s) is (are) not answerable
+ - do a residual plot and some diagnostics
+ - quantify the uncertainty in their conclusions and/or perform an inference correctly
+ - brief (about 2 pages long) for the main body of the report and no longer than 5 with supporting appendix of figures
+
+Done:
+
+ - include an executive summary
+ - done in Rmd (knitr)
 
 # Obsolete content
 
