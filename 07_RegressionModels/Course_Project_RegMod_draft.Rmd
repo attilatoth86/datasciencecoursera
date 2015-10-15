@@ -7,7 +7,7 @@ output: html_document
 
 This document is created for "Course Project" assignment in the framework of Regression Models course (part of Data Science Specialization by Johns Hopkins University Bloomberg School of Public Health on Coursera).
 
-# Introduction
+# The Challenge
 
 Working for *Motor Trend*, a magazine about the automobile industry. Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon. They are particularly interested in the following two questions:
 
@@ -18,9 +18,9 @@ Working for *Motor Trend*, a magazine about the automobile industry. Looking at 
 
 To be detailed...
 
-# Dataset
+# Data Overview
 
-Data to be analysed for this exercise is a built-in object, `mtcars`, coming along with any R distribution. Let's take a look at it:
+Data to be analysed for this exercise reside as a built-in object, called `mtcars`, comes along with any R distribution. Let's take a first look at it:
  
 ```{r}
 str(mtcars)
@@ -46,58 +46,73 @@ From R documentation (`?mtcars`) the following information can be obtained about
 
 First, I load all the necessary R packages for further analyses:
 
-```{r}
+```{r message=FALSE}
 library(ggplot2)
 library(reshape)
+library(plyr)
+library(dplyr)
+library(leaps)
 ```
 
 Let's take a look at the outcome variable (miles per gallon)
 
 ```{r}
 summary(mtcars$mpg)
-table(mtcars$am)
-am_means <- data.frame(value=rbind(totalmean=mean(mtcars$mpg), automean=mean(mtcars[mtcars$am==1,]$mpg), manmean=mean(mtcars[mtcars$am==0,]$mpg)))
-ggplot(mtcars, aes(x=mpg)) + 
-  geom_density(fill="black", alpha=0.3) +
-  geom_density(aes(fill=factor(am)), alpha=0.6) + 
-  geom_vline(xintercept=am_means[,1], colour="red", lty=am_means[,1], lwd=1)
-ggplot(mtcars, aes(y=mpg, x=factor(am))) + geom_boxplot()
+ggplot(mtcars, aes(x=mpg)) + geom_density(fill="black", alpha=0.3) + 
+  geom_density(aes(fill=factor(am)), alpha=0.6)
+```
 
-mtcars_norm <- mtcars
-mtcars_norm$cyl <- (mtcars$cyl-mean(mtcars$cyl))/sd(mtcars$cyl)
-mtcars_norm$disp <- (mtcars$disp-mean(mtcars$disp))/sd(mtcars$disp)
-mtcars_norm$hp <- (mtcars$hp-mean(mtcars$hp))/sd(mtcars$hp)
-mtcars_norm$drat <- (mtcars$drat-mean(mtcars$drat))/sd(mtcars$drat)
-mtcars_norm$wt <- (mtcars$wt-mean(mtcars$wt))/sd(mtcars$wt)
-mtcars_norm$qsec <- (mtcars$qsec-mean(mtcars$qsec))/sd(mtcars$qsec)
-mtcars_norm$vs <- (mtcars$vs-mean(mtcars$vs))/sd(mtcars$vs)
-mtcars_norm$am <- (mtcars$am-mean(mtcars$am))/sd(mtcars$am)
-mtcars_norm$gear <- (mtcars$gear-mean(mtcars$gear))/sd(mtcars$gear)
-mtcars_norm$carb <- (mtcars$carb-mean(mtcars$carb))/sd(mtcars$carb)
+To explore relationship patterns between variables and Miles per Gallon measure I plotted all variables against the outcome.
 
-mtcars_z_melted <- melt(mtcars_norm, id="mpg")
-
-mtcars_melted <- melt(mtcars, id="mpg")
-
-ggplot(mtcars_z_melted, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet_wrap(~variable, nrow=2)
-
-
-
+```{r}
+mtcars_var_scaled <- data.frame(scale(mtcars)) %>% select(cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb)
+mtcars_scaled <- cbind(mpg=mtcars$mpg, mtcars_var_scaled)
+mtcars_sc_m <- melt(mtcars_scaled, id="mpg")
+ggplot(mtcars_sc_m, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet_wrap(~variable, nrow=2)
 ```
 
 To be detailed...
 
 # Model fit / model selection strategy
-```{r}
-null <- lm(mpg ~ 1, mtcars)
-full <- lm(mpg ~ ., mtcars)
-step(null, scope=list(lower=null, upper=full), direction="forward") 
-step(full, data=mtcars, direction="backward") 
-step(null, scope = list(upper=full), data=mtcars, direction="both")
-step(full)
 
+This part is about variable selection.
+
+## Stepwise variable selection
+
+```{r results='hide'}
+full_model <- lm(mpg ~ ., mtcars)
+final_model <- step(full_model)
+```
+
+In order to find the best linear regression model onto our dataset I performed some model selection algorythm. First, most obvious try was the `step()` function. The following model has been selected in a backward stepwise process as the best fit, that incorporates the following variables: `r names(final_model$coefficients[2:4])`.
+
+```{r}
+final_model
+```
+
+## Regression subset selection including exhaustive search
+
+Performing different method for variable selection, the result has not changed.
+
+```{r}
+subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtcars)
+plot(subset)
 ```
 
 
 To be detailed...
 
+# Obsolete content
+
+```{r eval=FALSE}
+table(mtcars$am)
+am_means <- data.frame(value=rbind(totalmean=mean(mtcars$mpg), automean=mean(mtcars[mtcars$am==1,]$mpg), manmean=mean(mtcars[mtcars$am==0,]$mpg)))
+ggplot(mtcars, aes(y=mpg, x=factor(am))) + geom_boxplot()
+mtcars_melted <- melt(mtcars, id="mpg")
+
+null <- lm(mpg ~ 1, mtcars)
+
+step(null, scope=list(lower=null, upper=full), direction="forward") 
+step(full, data=mtcars, direction="backward") 
+step(null, scope = list(upper=full), data=mtcars, direction="both")
+```
