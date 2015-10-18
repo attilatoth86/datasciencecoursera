@@ -1,8 +1,6 @@
 ---
 title: "Course Project - Regression Models"
-author: "attila.toth86"
-date: "21st Oct 2015"
-output: html_document
+output: pdf_document
 ---
 
 This document is created for "Course Project" assignment in the framework of Regression Models course (part of Data Science Specialization by Johns Hopkins University Bloomberg School of Public Health on Coursera).
@@ -23,6 +21,7 @@ To be detailed...
 Data to be analysed for this exercise reside as a built-in object, called `mtcars`, comes along with any R distribution. Let's take a first look at it:
  
 ```{r echo=FALSE}
+# Overview of variables
 str(mtcars)
 ```
 
@@ -44,60 +43,64 @@ From R documentation (`?mtcars`) the following information can be obtained about
 
 # Exploratory Data Analyses
 
-First, I load all the necessary R packages for further analyses:
-
-```{r message=FALSE}
-library(ggplot2); library(reshape); library(plyr); library(dplyr); library(leaps);
+```{r message=FALSE, echo=FALSE}
+# First, I load all the necessary R packages for further analyses:
+library(ggplot2); library(reshape); library(plyr); library(dplyr); library(leaps); library(GGally);
 ```
 
-Let's take a look at the outcome variable (miles per gallon)
+Let's take a look at the outcome variable (miles per gallon). Observed mean is **`r round(mean(mtcars$mpg),2)`** with **`r round(sd(mtcars$mpg),2)`** standard deviation; for automatic cars the mean is *`r round(mean(mtcars$mpg[mtcars$am==0]),2)`* (standard deviation = *`r round(sd(mtcars$mpg[mtcars$am==0]),2)`*), for manual it is *`r round(mean(mtcars$mpg[mtcars$am==1]),2)`* (standard deviation = *`r round(sd(mtcars$mpg[mtcars$am==1]),2)`*). For distribution graphs please refer to *Figure 1* in the appendix.
 
-```{r}
-summary(mtcars$mpg)
-ggplot(mtcars, aes(x=mpg)) + geom_density(fill="black", alpha=0.3) + 
-  geom_density(aes(fill=factor(am)), alpha=0.6)
-```
-
-To explore relationship patterns between variables and Miles per Gallon measure I plotted all variables against the outcome.
-
-```{r}
-mtcars_var_scaled <- data.frame(scale(mtcars)) %>% select(cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb)
-mtcars_scaled <- cbind(mpg=mtcars$mpg, mtcars_var_scaled)
-mtcars_sc_m <- melt(mtcars_scaled, id="mpg")
-ggplot(mtcars_sc_m, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet_wrap(~variable, nrow=2)
-```
-
-To be detailed...
+To explore relationship patterns between variables and Miles per Gallon measure I plotted all (normalized) variables against the outcome (Figure 2).
 
 # Model fit / model selection strategy
 
-This part is about variable selection.
+This part is about selecting the most relevant variables that explain miles per gallon measure most precisely. In order to find the best fitting linear regression model I have revised outcomes of some model selection algorythm.
 
 ## Stepwise variable selection
 
-```{r results='hide'}
+```{r results='hide', echo=FALSE}
 full_model <- lm(mpg ~ ., mtcars)
 final_model <- step(full_model)
 ```
 
-In order to find the best linear regression model onto our dataset I performed some model selection algorythm. First, most obvious try was the `step()` function. The following model has been selected in a backward stepwise process as the best fit, that incorporates the following variables: `r names(final_model$coefficients[2:4])`.
-
-```{r}
-final_model
-```
+The first, most obvious try for variable selection is the stepwise algorythm, provided by `step()` function. The following model has been selected in a _backward_ stepwise process as the best fit, that incorporates the following variables: `r names(final_model$coefficients[1:4])` with the corresponding coefficients of `r final_model$coef`.
 
 ## Regression subset selection including exhaustive search
 
-Performing different method for variable selection, the result has not changed.
-
-```{r}
-subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtcars)
-plot(subset)
-```
+To verify the selected variables, I performed a different method for variable selection provided by `leaps` R library. (Figure 3) This result proofed the previously selected three variables.
 
 To be detailed...
 
 # Appendix
+
+## Figure 1: Distribution of Miles Per Gallon
+
+```{r echo=FALSE}
+ggplot(mtcars, aes(x=mpg)) + geom_density(fill="black", alpha=0.3) + 
+  geom_density(aes(fill=factor(am)), alpha=0.6)
+```
+
+## Figure 2: Outcome - Variable Regression Matrix
+
+```{r echo=FALSE}
+# Normalization
+mtcars_var_scaled <- data.frame(scale(mtcars)) %>% select(cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb)
+mtcars_scaled <- cbind(mpg=mtcars$mpg, mtcars_var_scaled)
+# Melt
+mtcars_sc_m <- melt(mtcars_scaled, id="mpg")
+# Plotting
+ggplot(mtcars_sc_m, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet_wrap(~variable, nrow=2)
+
+# Correlation table
+# ggpairs(mtcars, lower = list(continuous = "smooth"))
+```
+
+# Figure 3: Regression subset selection including exhaustive search
+
+```{r echo=FALSE}
+subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtcars)
+plot(subset)
+```
 
 # Pointing criteria
 
@@ -109,12 +112,12 @@ Todo:
  - answer the questions of interest or detail why the question(s) is (are) not answerable
  - do a residual plot and some diagnostics
  - quantify the uncertainty in their conclusions and/or perform an inference correctly
- - brief (about 2 pages long) for the main body of the report and no longer than 5 with supporting appendix of figures
 
 Done:
 
  - include an executive summary
  - done in Rmd (knitr)
+ - brief (about 2 pages long) for the main body of the report and no longer than 5 with supporting appendix of figures
 
 # Obsolete content
 
