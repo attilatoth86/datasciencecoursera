@@ -1,6 +1,6 @@
 ---
 title: "Course Project - Regression Models"
-output: pdf_document
+output: html_document
 ---
 
 This document is created for "Course Project" assignment in the framework of Regression Models course (part of Data Science Specialization by Johns Hopkins University Bloomberg School of Public Health on Coursera).
@@ -18,14 +18,25 @@ To be detailed...
 
 # Data Overview
 
-Data to be analysed for this exercise reside as a built-in object, called `mtcars`, comes along with any R distribution. Let's take a first look at it:
+Data to be analysed for this exercise reside as a built-in object, called `mtcars`, comes along with any R distribution as an extract from the 1974 Motor Trend US magazine that comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models) Let's take a first look at it:
+
+```{r message=FALSE, echo=FALSE}
+# First, I load all the necessary R packages for further analyses:
+library(ggplot2); library(reshape); library(plyr); library(dplyr); library(leaps); library(GGally); #library("printr");
+```
  
 ```{r echo=FALSE}
-# Overview of variables
-str(mtcars)
+# Overview of the dataset
+mtc <- mtcars; str(mtc)
 ```
 
-From R documentation (`?mtcars`) the following information can be obtained about the dataset:
+First few rows of the dataset:
+
+```{r echo=FALSE}
+head(mtc)
+```
+
+Each row represents a model that can be seen in the row names and each column is an attribute of a particular model. Further description is available in R documentation (`?mtcars`), that is presented below:
 
 |Variable|Description|
 |--------|-----------|
@@ -43,14 +54,42 @@ From R documentation (`?mtcars`) the following information can be obtained about
 
 # Exploratory Data Analyses
 
-```{r message=FALSE, echo=FALSE}
-# First, I load all the necessary R packages for further analyses:
-library(ggplot2); library(reshape); library(plyr); library(dplyr); library(leaps); library(GGally);
+I start with some initial explaratory data analysis to get a better insight of the potential patterns in the data set. Below I create pairwise scatterplots for every variable.
+
+```{r cache=TRUE, echo=FALSE}
+ggpairs(mtc, axisLabels="none", 
+        lower = list(continuous = "smooth", params=c(colour="blue")),
+        upper=list(params=list(size=3))) + theme(panel.grid.major = element_blank())
 ```
 
-Let's take a look at the outcome variable (miles per gallon). Observed mean is **`r round(mean(mtcars$mpg),2)`** with **`r round(sd(mtcars$mpg),2)`** standard deviation; for automatic cars the mean is *`r round(mean(mtcars$mpg[mtcars$am==0]),2)`* (standard deviation = *`r round(sd(mtcars$mpg[mtcars$am==0]),2)`*), for manual it is *`r round(mean(mtcars$mpg[mtcars$am==1]),2)`* (standard deviation = *`r round(sd(mtcars$mpg[mtcars$am==1]),2)`*). For distribution graphs please refer to *Figure 1* in the appendix.
+Let's also take a look at the outcome variable (miles per gallon), how it varies by automatic vs manual transmission.
 
-To explore relationship patterns between variables and Miles per Gallon measure I plotted all (normalized) variables against the outcome (Figure 2).
+```{r echo=FALSE}
+ggplot(mtc, aes(x=mpg)) + geom_density(fill="black", alpha=0.3, show_guide=TRUE) + 
+  geom_density(aes(fill=factor(am, labels = c("auto","manual"))), alpha=0.6) + 
+  guides(fill = guide_legend(title = "Transmission type")) +
+  labs(x="Miles per gallon",  y="Probability", title="Distribution of Miles Per Gallon")
+```
+
+At this point I will form a hypothesis that cars with automatic transmission can travel less distance per gallon then their counterparties with manual transmission. To check whether this pattern happened by random, I performed the necessary statistical analyses in the subsequent chapters.
+
+# Model fitting and inference
+
+First I test if an automatic or manual transmission better for MPG. My initial hypothesis is that cars with automatic transmission consume more fuel, thus have lower range, than cars with manual transmission. 
+
+|Population|Observed Mean|Standard Deviation|
+|----------|:-----------:|:----------------:|
+|Entire population|`r round(mean(mtc$mpg),2)`|`r round(sd(mtc$mpg),2)`|
+|Cars with automatic transmission|`r round(mean(mtc$mpg[mtc$am==0]),2)`|`r round(sd(mtc$mpg[mtc$am==0]),2)`|
+|Cars with manual transmission|`r round(mean(mtc$mpg[mtc$am==1]),2)`|`r round(sd(mtc$mpg[mtc$am==1]),2)`|
+
+I fit a linear regression model on the type of transmission (as categorical predictor) having miles per gallon as outcome. The estimations in the table below are in comparison to automatic transmission. 
+
+```{r}
+summary(lm(mpg ~ factor(am), mtc))$coef
+```
+
+This says that in the group of cars with manual transmission we expect a `r summary(lm(mpg ~ factor(am), mtc))$coef[2,1]` miles per gallon efficiency improvement comparing to group of cars with automatic transmission. Intercept (`r summary(lm(mpg ~ factor(am), mtc))$coef[1,1]`) represents the mean of "mpg" for automatic transmission group. Since the p value for this difference is close to zero, the mean difference between the two groups is statistically significance.
 
 # Model fit / model selection strategy
 
@@ -59,7 +98,7 @@ This part is about selecting the most relevant variables that explain miles per 
 ## Stepwise variable selection
 
 ```{r results='hide', echo=FALSE}
-full_model <- lm(mpg ~ ., mtcars)
+full_model <- lm(mpg ~ ., mtc)
 final_model <- step(full_model)
 ```
 
@@ -73,23 +112,18 @@ To be detailed...
 
 # Appendix
 
-## Figure 1: Distribution of Miles Per Gallon
 
-```{r echo=FALSE}
-ggplot(mtcars, aes(x=mpg)) + geom_density(fill="black", alpha=0.3) + 
-  geom_density(aes(fill=factor(am)), alpha=0.6)
-```
 
 ## Figure 2: Outcome - Variable Regression Matrix
 
 ```{r echo=FALSE}
 # Normalization
-mtcars_var_scaled <- data.frame(scale(mtcars)) %>% select(cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb)
-mtcars_scaled <- cbind(mpg=mtcars$mpg, mtcars_var_scaled)
+#mtcars_var_scaled <- data.frame(scale(mtcars)) %>% select(cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb)
+#mtcars_scaled <- cbind(mpg=mtcars$mpg, mtcars_var_scaled)
 # Melt
-mtcars_sc_m <- melt(mtcars_scaled, id="mpg")
+#mtcars_sc_m <- melt(mtcars_scaled, id="mpg")
 # Plotting
-ggplot(mtcars_sc_m, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet_wrap(~variable, nrow=2)
+#ggplot(mtcars_sc_m, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet_wrap(~variable, nrow=2)
 
 # Correlation table
 # ggpairs(mtcars, lower = list(continuous = "smooth"))
@@ -98,7 +132,7 @@ ggplot(mtcars_sc_m, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet
 # Figure 3: Regression subset selection including exhaustive search
 
 ```{r echo=FALSE}
-subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtcars)
+subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtc)
 plot(subset)
 ```
 
@@ -120,6 +154,13 @@ Done:
  - brief (about 2 pages long) for the main body of the report and no longer than 5 with supporting appendix of figures
 
 # Obsolete content
+
+```{r message=FALSE, echo=FALSE, eval=FALSE}
+mtc$am <- factor(mtc$am); mtc$gear <- factor(mtc$gear); mtc$vs <- factor(mtc$vs);
+levels(mtc$am)[levels(mtc$am)=="0"] <- "auto"; levels(mtc$am)[levels(mtc$am)=="1"] <- "man";
+
+```
+
 
 ```{r eval=FALSE}
 table(mtcars$am)
