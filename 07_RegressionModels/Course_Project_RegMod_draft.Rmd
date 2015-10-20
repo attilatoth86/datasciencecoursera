@@ -1,6 +1,6 @@
 ---
 title: "Course Project - Regression Models"
-output: html_document
+output: pdf_document
 ---
 
 This document is created for "Course Project" assignment in the framework of Regression Models course (part of Data Science Specialization by Johns Hopkins University Bloomberg School of Public Health on Coursera).
@@ -22,12 +22,19 @@ Data to be analysed for this exercise reside as a built-in object, called `mtcar
 
 ```{r message=FALSE, echo=FALSE}
 # First, I load all the necessary R packages for further analyses:
-library(ggplot2); library(reshape); library(plyr); library(dplyr); library(leaps); library(GGally); #library("printr");
+library(ggplot2); 
+library(reshape); 
+library(plyr); 
+library(dplyr); 
+library(leaps); 
+library(GGally); 
+#library("printr");
 ```
  
 ```{r echo=FALSE}
 # Overview of the dataset
-mtc <- mtcars; str(mtc)
+mtc <- mtcars
+str(mtc)
 ```
 
 First few rows of the dataset:
@@ -58,7 +65,7 @@ I start with some initial explaratory data analysis to get a better insight of t
 
 ```{r cache=TRUE, echo=FALSE}
 ggpairs(mtc, axisLabels="none", 
-        lower = list(continuous = "smooth", params=c(colour="blue")),
+        lower = list(params=c(colour="blue", alpha=0.5), continuous = "smooth"),
         upper=list(params=list(size=3))) + theme(panel.grid.major = element_blank())
 ```
 
@@ -91,9 +98,9 @@ summary(lm(mpg ~ factor(am), mtc))$coef
 
 This says that in the group of cars with manual transmission we expect a `r summary(lm(mpg ~ factor(am), mtc))$coef[2,1]` miles per gallon efficiency improvement comparing to group of cars with automatic transmission. Intercept (`r summary(lm(mpg ~ factor(am), mtc))$coef[1,1]`) represents the mean of "mpg" for automatic transmission group. Since the p value for this difference is close to zero, the mean difference between the two groups is statistically significance.
 
-# Model fit / model selection strategy
+## Multivariable model
 
-This part is about selecting the most relevant variables that explain miles per gallon measure most precisely. In order to find the best fitting linear regression model I have revised outcomes of some model selection algorythm.
+Using a single categorical variable to estimate expected "mpg" is not very precise. In order to create a better prediction model I examined additional variables that are available in `mtcars` dataset. My goal is to determine the optimal set of variables that predicts "mpg" outcome for any given model by knowing its certain attributes.
 
 ## Stepwise variable selection
 
@@ -106,52 +113,40 @@ The first, most obvious try for variable selection is the stepwise algorythm, pr
 
 ## Regression subset selection including exhaustive search
 
-To verify the selected variables, I performed a different method for variable selection provided by `leaps` R library. (Figure 3) This result proofed the previously selected three variables.
+To verify the selected variables, I performed a different method for variable selection provided by `leaps` R library. This result proofed the previously selected three variables.
+
+```{r echo=FALSE}
+subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtc)
+plot(subset, main = "Regression subset selection including exhaustive search")
+```
 
 To be detailed...
+## Regression diagnostic
 
+```{r} 
+par(mfrow=c(2,2), mar = c(2,2.5,2,1.2))
+plot(final_model)
+```
 # Appendix
 
 
 
-## Figure 2: Outcome - Variable Regression Matrix
-
-```{r echo=FALSE}
-# Normalization
-#mtcars_var_scaled <- data.frame(scale(mtcars)) %>% select(cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb)
-#mtcars_scaled <- cbind(mpg=mtcars$mpg, mtcars_var_scaled)
-# Melt
-#mtcars_sc_m <- melt(mtcars_scaled, id="mpg")
-# Plotting
-#ggplot(mtcars_sc_m, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet_wrap(~variable, nrow=2)
-
-# Correlation table
-# ggpairs(mtcars, lower = list(continuous = "smooth"))
-```
-
-# Figure 3: Regression subset selection including exhaustive search
-
-```{r echo=FALSE}
-subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtc)
-plot(subset)
-```
 
 # Pointing criteria
 
 Todo:
-
- - interpret the coefficients
- - do some exploratory data analyses
- - fit multiple models and detail their strategy for model selection
  - answer the questions of interest or detail why the question(s) is (are) not answerable
- - do a residual plot and some diagnostics
  - quantify the uncertainty in their conclusions and/or perform an inference correctly
+ - brief (about 2 pages long) for the main body of the report and no longer than 5 with supporting appendix of figures
 
 Done:
-
+ 
+ - fit multiple models and detail their strategy for model selection
  - include an executive summary
  - done in Rmd (knitr)
- - brief (about 2 pages long) for the main body of the report and no longer than 5 with supporting appendix of figures
+ - do a residual plot and some diagnostics
+ - do some exploratory data analyses
+ - interpret the coefficients
 
 # Obsolete content
 
@@ -173,4 +168,18 @@ null <- lm(mpg ~ 1, mtcars)
 step(null, scope=list(lower=null, upper=full), direction="forward") 
 step(full, data=mtcars, direction="backward") 
 step(null, scope = list(upper=full), data=mtcars, direction="both")
+
+
+
+## Figure 2: Outcome - Variable Regression Matrix
+# Normalization
+#mtcars_var_scaled <- data.frame(scale(mtcars)) %>% select(cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb)
+#mtcars_scaled <- cbind(mpg=mtcars$mpg, mtcars_var_scaled)
+# Melt
+#mtcars_sc_m <- melt(mtcars_scaled, id="mpg")
+# Plotting
+#ggplot(mtcars_sc_m, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet_wrap(~variable, nrow=2)
+
+# Correlation table
+# ggpairs(mtcars, lower = list(continuous = "smooth"))
 ```
