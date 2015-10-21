@@ -1,6 +1,9 @@
 ---
 title: "Course Project - Regression Models"
-output: pdf_document
+output: 
+  html_document:
+    fig_width: 6
+    fig_height: 4
 ---
 
 This document is created for "Course Project" assignment in the framework of Regression Models course (part of Data Science Specialization by Johns Hopkins University Bloomberg School of Public Health on Coursera).
@@ -40,7 +43,7 @@ str(mtc)
 First few rows of the dataset:
 
 ```{r echo=FALSE}
-head(mtc)
+head(mtc, n=3)
 ```
 
 Each row represents a model that can be seen in the row names and each column is an attribute of a particular model. Further description is available in R documentation (`?mtcars`), that is presented below:
@@ -90,43 +93,81 @@ First I test if an automatic or manual transmission better for MPG. My initial h
 |Cars with automatic transmission|`r round(mean(mtc$mpg[mtc$am==0]),2)`|`r round(sd(mtc$mpg[mtc$am==0]),2)`|
 |Cars with manual transmission|`r round(mean(mtc$mpg[mtc$am==1]),2)`|`r round(sd(mtc$mpg[mtc$am==1]),2)`|
 
+## Simple linear regression
+
 I fit a linear regression model on the type of transmission (as categorical predictor) having miles per gallon as outcome. The estimations in the table below are in comparison to automatic transmission. 
 
 ```{r}
-summary(lm(mpg ~ factor(am), mtc))$coef
+summary(lm(mpg ~ factor(am), mtc))
 ```
 
-This says that in the group of cars with manual transmission we expect a `r summary(lm(mpg ~ factor(am), mtc))$coef[2,1]` miles per gallon efficiency improvement comparing to group of cars with automatic transmission. Intercept (`r summary(lm(mpg ~ factor(am), mtc))$coef[1,1]`) represents the mean of "mpg" for automatic transmission group. Since the p value for this difference is close to zero, the mean difference between the two groups is statistically significance.
+This says that **in the group of cars with manual transmission we expect a `r round(summary(lm(mpg ~ factor(am), mtc))$coef[2,1],4)` miles per gallon efficiency improvement comparing to group of cars with automatic transmission.** Intercept (`r round(summary(lm(mpg ~ factor(am), mtc))$coef[1,1],4)`) represents the mean of "mpg" for automatic transmission group. Since the p value for this difference is close to zero (`r round(summary(lm(mpg ~ factor(am), mtc))$coef[2,4],4)`), the mean difference between the two groups is statistically significance.
+
+Although the difference is proved, the model above has low power to explain variance in `mpg`: R Squared equals `r round(summary(lm(mpg ~ factor(am), mtc))$r.sq,4)` that implies that this simple linear regression explains only `r round(summary(lm(mpg ~ factor(am), mtc))$r.sq*100,2)`% of outcome variable variation.
 
 ## Multivariable model
 
-Using a single categorical variable to estimate expected "mpg" is not very precise. In order to create a better prediction model I examined additional variables that are available in `mtcars` dataset. My goal is to determine the optimal set of variables that predicts "mpg" outcome for any given model by knowing its certain attributes.
+Using a single categorical variable to estimate expected `mpg` is not very precise. In order to create a better prediction model I examined additional variables that are available in `mtcars` dataset. My goal is to determine the optimal set of variables that predicts `mpg` outcome for any given model by knowing its certain attributes.
 
-## Stepwise variable selection
+Going forward I will treat `am` (transmission type) and `vs` (cylinder alignment) as factors since the numbers they represent do not correspond to anything in the physical world rather encode categories.
+
+```{r echo=FALSE}
+mtc$am <- factor(mtc$am, labels = c("auto","manual"))
+mtc$vs <- factor(mtc$vs)
+```
+
+### Stepwise variable selection
 
 ```{r results='hide', echo=FALSE}
 full_model <- lm(mpg ~ ., mtc)
 final_model <- step(full_model)
+alt_final_model <- lm(mpg ~ cyl + wt, mtc)
+
+summary(final_model)
+summary(alt_final_model)
+
+anova(final_model, alt_final_model)
+anova(alt_final_model, final_model)
+
+
 ```
 
-The first, most obvious try for variable selection is the stepwise algorythm, provided by `step()` function. The following model has been selected in a _backward_ stepwise process as the best fit, that incorporates the following variables: `r names(final_model$coefficients[1:4])` with the corresponding coefficients of `r final_model$coef`.
+The first, most obvious try for variable selection is the stepwise algorythm, provided by `step()` function. This function executes stepwise feature selection by fetching through all the options between empty (interception only) and full (including all variables) models. This process can be performed in two directions; empty to full (forward) or full to empty (backward). The decision criterion, where iteration stops, is based on Akaike Information Criterion (AIC); selection process stops when the next variable exclusion/inclusion would not decrease the value of AIC anymore.
 
-## Regression subset selection including exhaustive search
+The following model has been selected in a *backward* stepwise process as the best fit, that incorporates the following variables: `r names(final_model$coefficients[1:4])` with the corresponding coefficients of `r final_model$coef`.
 
-To verify the selected variables, I performed a different method for variable selection provided by `leaps` R library. This result proofed the previously selected three variables.
+### Regression subset selection including exhaustive search
+
+To verify the selected variables, I performed a different method for variable selection provided by `leaps` R library. This result proofed the previously selected three variables. Exhaustive search method use Bayesian Information Criteria (BIC) to value model performance. (Model with the lowest value is considered as "best" fit.)
 
 ```{r echo=FALSE}
 subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtc)
-plot(subset, main = "Regression subset selection including exhaustive search")
+par(mfrow=c(1,1))
+plot(subset)
+title("Regression subset selection including exhaustive search",line=2)
 ```
 
-To be detailed...
-## Regression diagnostic
+### Regression diagnostics
+
+In this section, I performed some diagnostics on the final model.
 
 ```{r} 
 par(mfrow=c(2,2), mar = c(2,2.5,2,1.2))
 plot(final_model)
 ```
+
+#### Residuals vs fitted values
+
+By plotting residuals versus the fitted values, we’re looking for any sign of a particular pattern. Scale-Localtion figure basically presents the same thing but plots fitted values versus standardized residuals. In my model they do not show any notable pattern.
+
+#### Normal Q-Q plot - Residual Normality
+
+The normal Q-Q plot serves as an indicator to detect deviance from normal distribution in residuals.
+
+### Residual vs Leverage 
+
+To be detailed...
+
 # Appendix
 
 
