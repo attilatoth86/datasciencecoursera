@@ -99,7 +99,7 @@ First I test if an automatic or manual transmission better for MPG. My initial h
 
 I fit a linear regression model on the type of transmission (as categorical predictor) having miles per gallon as outcome. The estimations in the table below are in comparison to automatic transmission. 
 
-```{r}
+```{r echo=FALSE}
 summary(lm(mpg ~ factor(am), mtc))
 ```
 
@@ -144,13 +144,13 @@ title("Regression subset selection including exhaustive search",line=2)
 
 So both model selection algorythm returned with the same set of features that resulted the following model:
 
-```{r}
+```{r echo=FALSE}
 summary(final_model)
 ```
 
 Looking at P values of coefficients, I see that intercept became insignificant thus we can not be sure if it is different from zero or not. This situation hinders the interpretation capability of the model so I went forward to see what other options I had. From exhaustive feature search figure I pointed out that a model including number of cylinders & weight as predictors proved to be the second best according to Bayesian Information Criteria calculation.
 
-```{r}
+```{r echo=FALSE}
 alt_final_model <- lm(mpg ~ cyl + wt, mtc)
 summary(alt_final_model)
 ```
@@ -161,7 +161,7 @@ Although this model is not considered as the best for prediction (higher AIC, BI
 
 In this section, I performed some diagnostics on the final model.
 
-```{r} 
+```{r echo=FALSE} 
 par(mfrow=c(2,2), mar = c(2,2.5,2,1.2))
 plot(alt_final_model)
 ```
@@ -172,65 +172,9 @@ By plotting residuals versus the fitted values, we’re looking for any sign of 
 
 #### Normal Q-Q plot - Residual Normality
 
-The normal Q-Q plot serves as an indicator to detect deviance from normal distribution in residuals.
+The normal Q-Q plot serves as an indicator to detect deviance from normal distribution in residuals. Due to some items on the right tail indicates that residuals do not follow exactly normal but a slightly left skewed distribution.
 
-### Residual vs Leverage 
+#### Residual vs Leverage 
 
 To be detailed...
 
-# Appendix
-
-
-
-
-# Pointing criteria
-
-Todo:
- - answer the questions of interest or detail why the question(s) is (are) not answerable
- - quantify the uncertainty in their conclusions and/or perform an inference correctly
- - brief (about 2 pages long) for the main body of the report and no longer than 5 with supporting appendix of figures
-
-Done:
- 
- - fit multiple models and detail their strategy for model selection
- - include an executive summary
- - done in Rmd (knitr)
- - do a residual plot and some diagnostics
- - do some exploratory data analyses
- - interpret the coefficients
-
-# Obsolete content
-
-```{r message=FALSE, echo=FALSE, eval=FALSE}
-mtc$am <- factor(mtc$am); mtc$gear <- factor(mtc$gear); mtc$vs <- factor(mtc$vs);
-levels(mtc$am)[levels(mtc$am)=="0"] <- "auto"; levels(mtc$am)[levels(mtc$am)=="1"] <- "man";
-
-```
-
-
-```{r eval=FALSE}
-table(mtcars$am)
-am_means <- data.frame(value=rbind(totalmean=mean(mtcars$mpg), automean=mean(mtcars[mtcars$am==1,]$mpg), manmean=mean(mtcars[mtcars$am==0,]$mpg)))
-ggplot(mtcars, aes(y=mpg, x=factor(am))) + geom_boxplot()
-mtcars_melted <- melt(mtcars, id="mpg")
-
-null <- lm(mpg ~ 1, mtcars)
-
-step(null, scope=list(lower=null, upper=full), direction="forward") 
-step(full, data=mtcars, direction="backward") 
-step(null, scope = list(upper=full), data=mtcars, direction="both")
-
-
-
-## Figure 2: Outcome - Variable Regression Matrix
-# Normalization
-#mtcars_var_scaled <- data.frame(scale(mtcars)) %>% select(cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb)
-#mtcars_scaled <- cbind(mpg=mtcars$mpg, mtcars_var_scaled)
-# Melt
-#mtcars_sc_m <- melt(mtcars_scaled, id="mpg")
-# Plotting
-#ggplot(mtcars_sc_m, aes(y=mpg, x=value)) + geom_point(position="jitter") + facet_wrap(~variable, nrow=2)
-
-# Correlation table
-# ggpairs(mtcars, lower = list(continuous = "smooth"))
-```
