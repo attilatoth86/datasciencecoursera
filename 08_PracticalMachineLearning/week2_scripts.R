@@ -16,3 +16,9 @@ predictions
 
 confusionMatrix(predictions,testing$type)
 
+folds <- createFolds(y=spam$type,k=5,
+                     list=TRUE,returnTrain=TRUE)
+sapply(folds,length)
+
+head(folds)
+
