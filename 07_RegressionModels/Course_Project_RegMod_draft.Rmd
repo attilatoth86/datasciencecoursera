@@ -1,7 +1,7 @@
 ---
 title: "Course Project - Regression Models"
 output: 
-  html_document:
+  pdf_document:
     fig_width: 6
     fig_height: 5
 ---
@@ -17,7 +17,7 @@ Working for *Motor Trend*, a magazine about the automobile industry. Looking at 
 
 # Executive Summary
 
-To be detailed...
+It is statistically proved that transmission type affects fuel efficiency in cars. Cars with manual transmission can travel on average of 7.2 miles more per gallon. (With 95% chance, manual transmission cars travel 3.6 - 10.8 miles more per gallon.) Although transmission type can differentiate cars in respect of fuel efficiency but in order to predict mpg I found that cylinder number and weight are better predictors.
 
 # Data Overview
 
@@ -66,7 +66,7 @@ Each row represents a model that can be seen in the row names and each column is
 
 I start with some initial explaratory data analysis to get a better insight of the potential patterns in the data set. Below I create pairwise scatterplots for every variable.
 
-```{r cache=TRUE, echo=FALSE}
+```{r cache=TRUE, echo=FALSE, fig.width=4.5, fig.height=4.5, fig.align='center'}
 ggpairs(mtc, axisLabels="none", 
         lower = list(params=c(colour="blue", alpha=0.5), continuous = "smooth"),
         upper=list(params=list(size=3))) + theme(panel.grid.major = element_blank())
@@ -103,7 +103,7 @@ I fit a linear regression model on the type of transmission (as categorical pred
 summary(lm(mpg ~ factor(am), mtc))
 ```
 
-This says that **in the group of cars with manual transmission we expect a `r round(summary(lm(mpg ~ factor(am), mtc))$coef[2,1],4)` miles per gallon efficiency improvement (in the confidence interval of `r confint(lm(mpg ~ factor(am), mtc), "factor(am)manual")`) comparing to group of cars with automatic transmission.** Intercept (`r round(summary(lm(mpg ~ factor(am), mtc))$coef[1,1],4)`) represents the mean of "mpg" for automatic transmission group. Since the p value for this difference is so close to zero the mean difference between the two groups is statistically significance.
+This says that **in the group of cars with manual transmission we expect a `r round(summary(lm(mpg ~ factor(am), mtc))$coef[2,1],4)` miles per gallon efficiency improvement (in the confidence interval of `r confint(lm(mpg ~ factor(am), mtc), "factor(am)1")`) comparing to group of cars with automatic transmission.** Intercept (`r round(summary(lm(mpg ~ factor(am), mtc))$coef[1,1],4)`) represents the mean of "mpg" for automatic transmission group. Since the p value for this difference is so close to zero the mean difference between the two groups is statistically significance.
 
 Although the difference is proved, the model above has low power to explain variance in `mpg`: R Squared equals `r round(summary(lm(mpg ~ factor(am), mtc))$r.sq,4)` that implies that this simple linear regression explains only `r round(summary(lm(mpg ~ factor(am), mtc))$r.sq*100,2)`% of outcome variable variation.
 
@@ -176,5 +176,5 @@ The normal Q-Q plot serves as an indicator to detect deviance from normal distri
 
 #### Residual vs Leverage 
 
-To be detailed...
+Plot shows that there is no high leverage data points in the population, however there are some high residual points. But these do not alter the regression, so they reside below the critical 0.5 Cook's distance.
 
