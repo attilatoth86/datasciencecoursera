@@ -26,6 +26,26 @@ the section on the Weight Lifting Exercise Dataset).
  - The test data are available here: 
  https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 
+Let's download if they are not yet in the working directory and load them into 
+memory.
+
+```{r cache=TRUE}
+if(file.exists("pml-training.csv")==FALSE) 
+    {
+    download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+                  ,destfile = "pml-training.csv"
+                  ,method="curl")
+     }
+if(file.exists("pml-testing.csv")==FALSE) 
+    {
+    download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+                  ,destfile = "pml-testing.csv"
+                  ,method="curl")
+     }
+pml <- read.csv("pml-training.csv")
+orig_pml_test <- read.csv("pml-testing.csv")
+```
+
 The data for this project come from this source: 
 http://groupware.les.inf.puc-rio.br/har. If you use the document you create for 
 this class for any purpose please cite them as they have been very generous in 
@@ -34,8 +54,69 @@ allowing their data to be used for this kind of assignment.
 # Goal
 
 The goal of this project is to predict the manner in which they did the 
-exercise. This is the "classe" variable in the training set. Any of the other 
+exercise. This is the `classe` variable in the training set. Any of the other 
 variables are allowed use for prediction. This report describes how the model 
 was built, how cross validation was used, what the expected out of sample error 
 is, and why or how the choices were made.
+
+# Exploratory Data Analysis
+
+Let's load the necessary packages.
+
+```{r}
+library(caret)
+```
+
+"Setting seed" for reproducible results.
+
+```{r}
+set.seed(1234)
+```
+
+## Data splitting
+
+As always, my first step is to slice up our given dataset to training and 
+testing datasets. Testing dataset will not be touched until my model is ready.
+Thus, any type of exploratory data analysis will be executed only on training 
+set to avoid my model to be biased by testing data part.
+
+```{r}
+intrain <- createDataPartition(y = pml$classe, p=0.75, list=FALSE)
+pmltrain <- pml[intrain,]
+pmltest <- pml[-intrain,]
+
+# to be considered: K-fold
+```
+
+Let's take a look at the training dataset and the predictable outcome variable.
+
+```{r}
+str(pmltrain, list.len = 200)
+summary(pmltrain$classe)
+```
+
+I decided to remove `user_name` since it would bring bias in the prediction 
+(overfitting to this specific dataset) but would not add to the prediction power 
+of a generalized model.
+
+```{r}
+pmltrain <- pmltrain[,-2]
+```
+
+Check for zero covariates (features with zero or close to zero variance), and 
+remove them from dataset.
+
+```{r}
+nsv <- nearZeroVar(pmltrain,saveMetrics=TRUE)
+nsv
+
+# pmltrain <- pmltrain[,nsv$nzv==FALSE]
+```
+
+Let's train a model with glm method.
+
+```{r cache=TRUE}
+mdl <- train(classe~., data=pmltrain, method = "glm")
+
+```
 
