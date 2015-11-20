@@ -34,13 +34,15 @@ if(file.exists("pml-training.csv")==FALSE)
     {
     download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
                   ,destfile = "pml-training.csv"
-                  ,method="curl")
+                  #,method="curl"
+                  )
      }
 if(file.exists("pml-testing.csv")==FALSE) 
     {
     download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
                   ,destfile = "pml-testing.csv"
-                  ,method="curl")
+                  #,method="curl"
+                  )
      }
 pml <- read.csv("pml-training.csv")
 orig_pml_test <- read.csv("pml-testing.csv")
@@ -97,14 +99,20 @@ summary(pmltrain$classe)
 
 I decided to remove `user_name` since it would bring bias in the prediction 
 (overfitting to this specific dataset) but would not add to the prediction power 
-of a generalized model.
+of a generalized model. (E.g. if Carlitos always performed his exercise 
+correctly then learning algorythms would make use of this information and apply
+this information for prediction. However, it might be useful information for our
+given test set but for generalized model, where we do not have the any user 
+information, obviously it adds no value.)
 
 ```{r}
 pmltrain <- pmltrain[,-2]
 ```
 
-Check for zero covariates (features with zero or close to zero variance), and 
-remove them from dataset.
+`raw_timestamp_part_1`, 'raw_timestamp_part_2', 'cvtd_timestamp'
+
+Check for zero covariates (features with zero or close to zero variance), and
+see if I can remove them from dataset.
 
 ```{r}
 nsv <- nearZeroVar(pmltrain,saveMetrics=TRUE)
@@ -113,10 +121,30 @@ nsv
 # pmltrain <- pmltrain[,nsv$nzv==FALSE]
 ```
 
-Let's train a model with glm method.
+Some variables are classified as near-to-zero-variable but none of them is
+actually zero. So at this point I keep them.
+
+Let's train a model with Random Forest, as it is a widely used classifier. (I
+could have used Linear Discriminants, multinomial logit, Support Vector 
+Machines, etc..)
 
 ```{r cache=TRUE}
-mdl <- train(classe~., data=pmltrain, method = "glm")
+mdl <- train(classe~., data=pmltrain, method = "rf")
 
+```
+
+I defined `pml_write_files` function to write out predictions into 20 separate 
+files. (Source: Practical Machine Learning, Course Project Submission 
+assignement instructions, 
+url=https://class.coursera.org/predmachlearn-034/assignment/view?assignment_id=5)
+
+```{r}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
 ```
 
