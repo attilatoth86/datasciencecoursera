@@ -1,0 +1,180 @@
+---
+title: "Course Project - Regression Models"
+output: 
+  pdf_document:
+    fig_width: 6
+    fig_height: 5
+---
+
+This document is created for *"Course Project"* assignment in the framework of Regression Models course (part of Data Science Specialization by Johns Hopkins University Bloomberg School of Public Health on Coursera).
+
+# The Challenge
+
+Working for *Motor Trend*, a magazine about the automobile industry. Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon. They are particularly interested in the following two questions:
+
+ - Is an automatic or manual transmission better for MPG?
+ - Quantify the MPG difference between automatic and manual transmissions?
+
+# Executive Summary
+
+It is statistically proved that transmission type affects fuel efficiency in cars. Cars with manual transmission can travel on average of 7.2 miles more per gallon. (With 95% chance, manual transmission cars travel 3.6 - 10.8 miles more per gallon.) Although transmission type can differentiate cars in respect of fuel efficiency but in order to predict mpg I found that cylinder number and weight are better predictors.
+
+# Data Overview
+
+Data to be analysed for this exercise reside as a built-in object, called `mtcars`, comes along with any R distribution. This is an extract from the 1974 Motor Trend US magazine that comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models) Let's take a first look at it:
+
+```{r message=FALSE, echo=FALSE}
+# First, I load all the necessary R packages for further analyses:
+library(ggplot2); 
+library(reshape); 
+library(plyr); 
+library(dplyr); 
+library(leaps); 
+library(GGally); 
+#library("printr");
+```
+ 
+```{r echo=FALSE}
+# Overview of the dataset
+mtc <- mtcars
+str(mtc)
+```
+
+First few rows of the dataset:
+
+```{r echo=FALSE}
+head(mtc, n=3)
+```
+
+Each row represents a model that can be seen in the row names and each column is an attribute of a particular model. Further description is available in R documentation (`?mtcars`), that is presented below:
+
+|Variable|Description|
+|--------|-----------|
+|mpg|Miles/(US) gallon|
+|cyl|Number of cylinders|
+|disp|Displacement (cu.in.)|
+|hp|Gross horsepower|
+|drat|Rear axle ratio|
+|wt|Weight (lb/1000)|
+|qsec|1/4 mile time|
+|vs|V/S|
+|am|Transmission (0 = automatic, 1 = manual)|
+|gear|Number of forward gears|
+|carb|Number of carburetors|
+
+# Exploratory Data Analyses
+
+I start with some initial explaratory data analysis to get a better insight of the potential patterns in the data set. Below I create pairwise scatterplots for every variable.
+
+```{r cache=TRUE, echo=FALSE, fig.width=4.5, fig.height=4.5, fig.align='center'}
+ggpairs(mtc, axisLabels="none", 
+        lower = list(params=c(colour="blue", alpha=0.5), continuous = "smooth"),
+        upper=list(params=list(size=3))) + theme(panel.grid.major = element_blank())
+```
+
+This presents that `mpg` shows high correlation (>0.8) with number of cylinders, displacement and weight. Other notable (corr>0.5) variables might be the horsepower, rear axle ratio, cylinder alignment (V/S), transmission type or the number of carburetors. Additionally, one can point out in this table that there are several variable combinations that show significant correlation, suggesting that including all of them will raise the threat of multicollinearity.
+
+Let's also take a look at the outcome variable (miles per gallon) and see how it varies by automatic vs manual transmission.
+
+```{r echo=FALSE}
+ggplot(mtc, aes(x=mpg)) + geom_density(fill="black", alpha=0.3, show_guide=TRUE) + 
+  geom_density(aes(fill=factor(am, labels = c("auto","manual"))), alpha=0.6) + 
+  guides(fill = guide_legend(title = "Transmission type")) +
+  labs(x="Miles per gallon",  y="Probability", title="Distribution of Miles Per Gallon")
+```
+
+At this point I will form a hypothesis that cars with automatic transmission can travel less distance per gallon then their counterparties with manual transmission. To check whether this pattern happened by random, I performed the necessary statistical analyses in the subsequent chapters.
+
+# Model fitting and inference
+
+First I test if an automatic or manual transmission better for MPG. My initial hypothesis is that cars with automatic transmission consume more fuel, thus have lower range, than cars with manual transmission. 
+
+|Population|Observed Mean|Standard Deviation|
+|----------|:-----------:|:----------------:|
+|Entire population|`r round(mean(mtc$mpg),2)`|`r round(sd(mtc$mpg),2)`|
+|Cars with automatic transmission|`r round(mean(mtc$mpg[mtc$am==0]),2)`|`r round(sd(mtc$mpg[mtc$am==0]),2)`|
+|Cars with manual transmission|`r round(mean(mtc$mpg[mtc$am==1]),2)`|`r round(sd(mtc$mpg[mtc$am==1]),2)`|
+
+## Simple linear regression
+
+I fit a linear regression model on the type of transmission (as categorical predictor) having miles per gallon as outcome. The estimations in the table below are in comparison to automatic transmission. 
+
+```{r echo=FALSE}
+summary(lm(mpg ~ factor(am), mtc))
+```
+
+This says that **in the group of cars with manual transmission we expect a `r round(summary(lm(mpg ~ factor(am), mtc))$coef[2,1],4)` miles per gallon efficiency improvement (in the confidence interval of `r confint(lm(mpg ~ factor(am), mtc), "factor(am)1")`) comparing to group of cars with automatic transmission.** Intercept (`r round(summary(lm(mpg ~ factor(am), mtc))$coef[1,1],4)`) represents the mean of "mpg" for automatic transmission group. Since the p value for this difference is so close to zero the mean difference between the two groups is statistically significance.
+
+Although the difference is proved, the model above has low power to explain variance in `mpg`: R Squared equals `r round(summary(lm(mpg ~ factor(am), mtc))$r.sq,4)` that implies that this simple linear regression explains only `r round(summary(lm(mpg ~ factor(am), mtc))$r.sq*100,2)`% of outcome variable variation.
+
+## Multivariable model
+
+Using a single categorical variable to estimate expected `mpg` is not very precise. In order to create a better prediction model I examined additional variables that are available in `mtcars` dataset. My goal is to determine the optimal set of variables that predicts `mpg` outcome for any given model by knowing its certain attributes.
+
+Going forward I will treat `am` (transmission type) and `vs` (cylinder alignment) as factors since the numbers they represent do not correspond to anything in the physical world rather encode categories.
+
+```{r echo=FALSE}
+mtc$am <- factor(mtc$am, labels = c("auto","manual"))
+mtc$vs <- factor(mtc$vs)
+```
+
+### Stepwise variable selection
+
+```{r results='hide', echo=FALSE}
+full_model <- lm(mpg ~ ., mtc)
+final_model <- step(full_model)
+```
+
+The first, most obvious try for variable selection is the stepwise algorythm, provided by `step()` function. This function executes stepwise feature selection by fetching through all the options between empty (interception only) and full (including all variables) models. This process can be performed in two directions; empty to full (forward) or full to empty (backward). The decision criterion, where iteration stops, is based on Akaike Information Criterion (AIC); selection process stops when the next variable exclusion/inclusion would not decrease the value of AIC anymore.
+
+The following model has been selected in a *backward* stepwise process as the best fit that incorporates the following variables: *`r names(final_model$coefficients[1:4])`* with the corresponding coefficients of *`r final_model$coef`*.
+
+### Regression subset selection including exhaustive search
+
+To verify the selected variables, I performed a different method for variable selection provided by `leaps` R library. This result proofed the previously selected three variables. Exhaustive search method use Bayesian Information Criteria (BIC) to value model performance. (Model with the lowest value is considered as "best" fit.)
+
+```{r echo=FALSE}
+subset <- regsubsets(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtc)
+par(mfrow=c(1,1))
+plot(subset)
+title("Regression subset selection including exhaustive search",line=2)
+```
+
+### Model valuation
+
+So both model selection algorythm returned with the same set of features that resulted the following model:
+
+```{r echo=FALSE}
+summary(final_model)
+```
+
+Looking at P values of coefficients, I see that intercept became insignificant thus we can not be sure if it is different from zero or not. This situation hinders the interpretation capability of the model so I went forward to see what other options I had. From exhaustive feature search figure I pointed out that a model including number of cylinders & weight as predictors proved to be the second best according to Bayesian Information Criteria calculation.
+
+```{r echo=FALSE}
+alt_final_model <- lm(mpg ~ cyl + wt, mtc)
+summary(alt_final_model)
+```
+
+Although this model is not considered as the best for prediction (higher AIC, BIC and lower R-Squared) but it is way better interpretable, considering that it is simplier and even the estimated coefficients are statistically significant. Therefore I chose this model to proceed with.
+
+### Regression diagnostics
+
+In this section, I performed some diagnostics on the final model.
+
+```{r echo=FALSE} 
+par(mfrow=c(2,2), mar = c(2,2.5,2,1.2))
+plot(alt_final_model)
+```
+
+#### Residuals vs fitted values
+
+By plotting residuals versus the fitted values, we’re looking for any sign of a particular pattern. Scale-Localtion figure basically presents the same thing but plots fitted values versus standardized residuals. In my model they do not show any notable pattern.
+
+#### Normal Q-Q plot - Residual Normality
+
+The normal Q-Q plot serves as an indicator to detect deviance from normal distribution in residuals. Due to some items on the right tail indicates that residuals do not follow exactly normal but a slightly left skewed distribution.
+
+#### Residual vs Leverage 
+
+Plot shows that there is no high leverage data points in the population, however there are some high residual points. But these do not alter the regression, so they reside below the critical 0.5 Cook's distance.
+
