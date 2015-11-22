@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Practical Machine Learning Course Project by attilatoth86</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Practical Machine Learning Course Project</h1>
+          <h2></h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/attilatoth86/datasciencecoursera/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/attilatoth86/datasciencecoursera/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/attilatoth86/datasciencecoursera" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>
+<a id="background" class="anchor" href="#background" aria-hidden="true"><span class="octicon octicon-link"></span></a>Background</h1>
+
+<p>Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible 
+to collect a large amount of data about personal activity relatively 
+inexpensively. These type of devices are part of the quantified self movement – 
+a group of enthusiasts who take measurements about themselves regularly to 
+improve their health, to find patterns in their behavior, or because they are 
+tech geeks. One thing that people regularly do is quantify how much of a 
+particular activity they do, but they rarely quantify how well they do it. In 
+this project, your goal will be to use data from accelerometers on the belt, 
+forearm, arm, and dumbell of 6 participants. They were asked to perform barbell 
+lifts correctly and incorrectly in 5 different ways. More information is 
+available from the website here: <a href="http://groupware.les.inf.puc-rio.br/har">http://groupware.les.inf.puc-rio.br/har</a> (see 
+the section on the Weight Lifting Exercise Dataset). </p>
+
+<h1>
+<a id="data" class="anchor" href="#data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Data</h1>
+
+<ul>
+<li>The training data for this project are available here: 
+<a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv</a>
+</li>
+<li>The test data are available here: 
+<a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv</a>
+</li>
+</ul>
+
+<p>Let's download them if they are not yet in the working directory and load them 
+into memory.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-k">if</span>(file.exists(<span class="pl-s"><span class="pl-pds">"</span>pml-training.csv<span class="pl-pds">"</span></span>)<span class="pl-k">==</span><span class="pl-c1">FALSE</span>) 
+    {
+    download.file(<span class="pl-s"><span class="pl-pds">"</span>https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv<span class="pl-pds">"</span></span>
+                  ,<span class="pl-v">destfile</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>pml-training.csv<span class="pl-pds">"</span></span>
+                  <span class="pl-c">#,method="curl"</span>
+                  )
+     }
+<span class="pl-k">if</span>(file.exists(<span class="pl-s"><span class="pl-pds">"</span>pml-testing.csv<span class="pl-pds">"</span></span>)<span class="pl-k">==</span><span class="pl-c1">FALSE</span>) 
+    {
+    download.file(<span class="pl-s"><span class="pl-pds">"</span>https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv<span class="pl-pds">"</span></span>
+                  ,<span class="pl-v">destfile</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>pml-testing.csv<span class="pl-pds">"</span></span>
+                  <span class="pl-c">#,method="curl"</span>
+                  )
+     }
+<span class="pl-c"># Training dataset goes to variables with 'pml' prefix</span>
+<span class="pl-smi">pml</span> <span class="pl-k">&lt;-</span> read.csv(<span class="pl-s"><span class="pl-pds">"</span>pml-training.csv<span class="pl-pds">"</span></span>)</pre></div>
+
+<p>The data for this project come from this source: 
+<a href="http://groupware.les.inf.puc-rio.br/har">http://groupware.les.inf.puc-rio.br/har</a>.</p>
+
+<h1>
+<a id="goal" class="anchor" href="#goal" aria-hidden="true"><span class="octicon octicon-link"></span></a>Goal</h1>
+
+<p>The goal of this project is to predict the manner in which they did the 
+exercise. This is the <code>classe</code> variable in the training set. Any of the other 
+variables are allowed use for prediction. This report describes how the model 
+was built, how cross validation was used, what the expected out of sample error 
+is, and why or how the choices were made.</p>
+
+<h1>
+<a id="preconditions" class="anchor" href="#preconditions" aria-hidden="true"><span class="octicon octicon-link"></span></a>Preconditions</h1>
+
+<p>Let's load the necessary packages.</p>
+
+<ul>
+<li>
+<code>caret</code> for machnine learning libraries</li>
+<li>
+<code>plyr</code> &amp; <code>dplyr</code> for data manipulation</li>
+<li>
+<code>doParallel</code> for exploiting the power of multi core machines</li>
+</ul>
+
+<div class="highlight highlight-source-r"><pre>library(<span class="pl-smi">caret</span>)
+library(<span class="pl-smi">plyr</span>)
+library(<span class="pl-smi">dplyr</span>)
+library(<span class="pl-smi">doParallel</span>)</pre></div>
+
+<p>I am "setting seed" for reproducible results.</p>
+
+<div class="highlight highlight-source-r"><pre>set.seed(<span class="pl-c1">1234</span>)</pre></div>
+
+<h1>
+<a id="data-splitting" class="anchor" href="#data-splitting" aria-hidden="true"><span class="octicon octicon-link"></span></a>Data splitting</h1>
+
+<p>As always, my first step is to slice up our given 'testing' dataset to training 
+and testing datasets that enables us to estimate out of sample error of a 
+particular model. Testing dataset will not be touched until my model is ready.
+Thus, any type of exploratory data analysis will be executed only on training 
+set to avoid my model to be biased by testing data part. I used a randomly 
+selected 75% of original training set to train my model.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">intrain</span> <span class="pl-k">&lt;-</span> createDataPartition(<span class="pl-v">y</span> <span class="pl-k">=</span> <span class="pl-smi">pml</span><span class="pl-k">$</span><span class="pl-smi">classe</span>, <span class="pl-v">p</span><span class="pl-k">=</span><span class="pl-c1">0.75</span>, <span class="pl-v">list</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>)
+<span class="pl-smi">pmltrain</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">pml</span>[<span class="pl-smi">intrain</span>,]
+<span class="pl-smi">pmltest</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">pml</span>[<span class="pl-k">-</span><span class="pl-smi">intrain</span>,]</pre></div>
+
+<p>Let's take a look at the training dataset and the predictable outcome variable.</p>
+
+<div class="highlight highlight-source-r"><pre>str(<span class="pl-smi">pmltrain</span>, <span class="pl-v">list.len</span> <span class="pl-k">=</span> <span class="pl-c1">200</span>)
+summary(<span class="pl-smi">pmltrain</span><span class="pl-k">$</span><span class="pl-smi">classe</span>)</pre></div>
+
+<h1>
+<a id="data-transformation-and-processing" class="anchor" href="#data-transformation-and-processing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Data Transformation and Processing</h1>
+
+<p>I decided to remove <code>user_name</code> since it can bring bias in the prediction 
+(overfitting to this specific dataset) but would not add to the prediction power 
+of a generalized model. (E.g. if Carlitos always performed his exercise 
+correctly then learning algorythms would make use of this information and apply
+this information for prediction. However, it might be useful information for our
+given test set but not for generalized model, where we do not have the any user 
+information.)</p>
+
+<p>Also, removal of timestamp fields (i.e. <code>raw_timestamp_part_1</code>, 
+<code>raw_timestamp_part_2</code>, <code>cvtd_timestamp</code>) makes sense, since these measures do
+not add any value for a general model. In the time of this analysis meaning of 
+variables of <code>new_window</code> &amp; <code>num_window</code> were unknown for me but they clearly 
+not reflect accelerometer measures so I left them out from the further analysis.
+Variable of <code>X</code> has been ignored upfront as well, since it represents a simple
+record identifier.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">pmltrainc</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">pmltrain</span> %<span class="pl-k">&gt;</span>% select(<span class="pl-k">-</span><span class="pl-smi">X</span>,
+                                 <span class="pl-k">-</span><span class="pl-smi">user_name</span>,
+                                 <span class="pl-k">-</span><span class="pl-smi">raw_timestamp_part_1</span>,
+                                 <span class="pl-k">-</span><span class="pl-smi">raw_timestamp_part_2</span>,
+                                 <span class="pl-k">-</span><span class="pl-smi">cvtd_timestamp</span>,
+                                 <span class="pl-k">-</span><span class="pl-smi">new_window</span>,
+                                 <span class="pl-k">-</span><span class="pl-smi">num_window</span>,
+                                 <span class="pl-k">-</span><span class="pl-smi">classe</span>)</pre></div>
+
+<p>I found that several factor variables were actually containing numeric
+information. Just to make sure that a simple factor-numeric conversion would not
+fail, I checked the levels for all factor variables.</p>
+
+<div class="highlight highlight-source-r"><pre>sapply(<span class="pl-smi">pmltrainc</span>[,sapply(<span class="pl-smi">pmltrainc</span>,<span class="pl-smi">is.factor</span>)],<span class="pl-smi">levels</span>)</pre></div>
+
+<p>Two particular values, <code>#DIV/0!</code> and empty values bring some data quality issue,
+so I handled it by replacing them with <code>NA</code>.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">pmltrainc</span>[<span class="pl-smi">pmltrainc</span><span class="pl-k">==</span><span class="pl-s"><span class="pl-pds">"</span>#DIV/0!<span class="pl-pds">"</span></span>] <span class="pl-k">&lt;-</span> <span class="pl-c1">NA</span>
+<span class="pl-smi">pmltrainc</span>[<span class="pl-smi">pmltrainc</span><span class="pl-k">==</span><span class="pl-s"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>] <span class="pl-k">&lt;-</span> <span class="pl-c1">NA</span></pre></div>
+
+<p>Then I converted all the factor variables to numeric.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-c"># http://stackoverflow.com/questions/8596466/r-change-all-columns-of-type-factor-to-numeric</span>
+<span class="pl-c"># Applying the wisdom from Carl Witthoft above:</span>
+<span class="pl-en">asNumeric</span> <span class="pl-k">&lt;-</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>) as.numeric(as.character(<span class="pl-smi">x</span>))
+<span class="pl-en">factorsNumeric</span> <span class="pl-k">&lt;-</span> <span class="pl-k">function</span>(<span class="pl-smi">d</span>) modifyList(<span class="pl-smi">d</span>, lapply(<span class="pl-smi">d</span>[, sapply(<span class="pl-smi">d</span>, <span class="pl-smi">is.factor</span>)],   
+                                                   <span class="pl-smi">asNumeric</span>))
+
+<span class="pl-c"># Convert to numeric</span>
+<span class="pl-smi">pmltraincnum</span> <span class="pl-k">&lt;-</span> factorsNumeric(<span class="pl-smi">pmltrainc</span>)</pre></div>
+
+<p>To avoid model building errors, I replaced NAs with zeros.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">pmltraincnum</span>[is.na(<span class="pl-smi">pmltraincnum</span>)] <span class="pl-k">&lt;-</span> <span class="pl-c1">0</span></pre></div>
+
+<p>Eventually I finalized the dataset for further analyses by including <code>classe</code>
+target variable.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">pmltraincnum</span> <span class="pl-k">&lt;-</span> cbind(<span class="pl-v">classe</span><span class="pl-k">=</span><span class="pl-smi">pmltrain</span><span class="pl-k">$</span><span class="pl-smi">classe</span>,<span class="pl-smi">pmltraincnum</span>)</pre></div>
+
+<p>These transformations have to be performed on test dataset as well.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">pmltestc</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">pmltest</span> %<span class="pl-k">&gt;</span>% select(<span class="pl-k">-</span><span class="pl-smi">X</span>,
+                               <span class="pl-k">-</span><span class="pl-smi">user_name</span>,
+                               <span class="pl-k">-</span><span class="pl-smi">raw_timestamp_part_1</span>,
+                               <span class="pl-k">-</span><span class="pl-smi">raw_timestamp_part_2</span>,
+                               <span class="pl-k">-</span><span class="pl-smi">cvtd_timestamp</span>,
+                               <span class="pl-k">-</span><span class="pl-smi">new_window</span>,
+                               <span class="pl-k">-</span><span class="pl-smi">num_window</span>,
+                               <span class="pl-k">-</span><span class="pl-smi">classe</span>)
+<span class="pl-smi">pmltestc</span>[<span class="pl-smi">pmltestc</span><span class="pl-k">==</span><span class="pl-s"><span class="pl-pds">"</span>#DIV/0!<span class="pl-pds">"</span></span>] <span class="pl-k">&lt;-</span> <span class="pl-c1">NA</span>
+<span class="pl-smi">pmltestc</span>[<span class="pl-smi">pmltestc</span><span class="pl-k">==</span><span class="pl-s"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>] <span class="pl-k">&lt;-</span> <span class="pl-c1">NA</span>
+<span class="pl-smi">pmltestcnum</span> <span class="pl-k">&lt;-</span> factorsNumeric(<span class="pl-smi">pmltestc</span>)
+<span class="pl-smi">pmltestcnum</span>[is.na(<span class="pl-smi">pmltestcnum</span>)] <span class="pl-k">&lt;-</span> <span class="pl-c1">0</span>
+<span class="pl-smi">pmltestcnum</span> <span class="pl-k">&lt;-</span> cbind(<span class="pl-v">classe</span><span class="pl-k">=</span><span class="pl-smi">pmltest</span><span class="pl-k">$</span><span class="pl-smi">classe</span>,<span class="pl-smi">pmltestcnum</span>)</pre></div>
+
+<h2>
+<a id="dimension-reduction" class="anchor" href="#dimension-reduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dimension Reduction</h2>
+
+<p>In order to build robust prediction model I needed to reduct the number of
+independent variables. At this stage I still had 152 variables that is too much
+for building a classifier model on top of that which returns results in a
+reasonable time frame.</p>
+
+<h3>
+<a id="removing-zero-covariates" class="anchor" href="#removing-zero-covariates" aria-hidden="true"><span class="octicon octicon-link"></span></a>Removing Zero Covariates</h3>
+
+<p>The first and most obvious task to be performed here is to identify and filter
+out covariates with zero variance. (Since they will not have any explanation
+power on my model for sure.)</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">pmltraincnumnonzv</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">pmltraincnum</span>[,nearZeroVar(<span class="pl-smi">pmltraincnum</span>,
+                                               <span class="pl-v">saveMetrics</span><span class="pl-k">=</span><span class="pl-c1">TRUE</span>)<span class="pl-k">$</span><span class="pl-smi">zeroVar</span><span class="pl-k">==</span><span class="pl-c1">FALSE</span>]</pre></div>
+
+<p>The following 9 variables have been filter out in this step:</p>
+
+<div class="highlight highlight-source-r"><pre>rownames(
+    nearZeroVar(<span class="pl-smi">pmltraincnum</span>,
+                <span class="pl-v">saveMetrics</span><span class="pl-k">=</span><span class="pl-c1">TRUE</span>)[nearZeroVar(<span class="pl-smi">pmltraincnum</span>,
+                                              <span class="pl-v">saveMetrics</span><span class="pl-k">=</span><span class="pl-c1">TRUE</span>)<span class="pl-k">$</span><span class="pl-smi">zeroVar</span><span class="pl-k">==</span><span class="pl-c1">TRUE</span>,
+                                  ]
+        )</pre></div>
+
+<h3>
+<a id="removing-correlated-predictors" class="anchor" href="#removing-correlated-predictors" aria-hidden="true"><span class="octicon octicon-link"></span></a>Removing correlated predictors</h3>
+
+<p>In this section I considered to remove those predictors that have high (&gt;0.99) 
+correlation with one ore more other predictors, as they bring redundancy in the
+model. (Correlation over 0.99 shows very high similarity between variables.)</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">pmltraincnumnonzvnoncorr</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">pmltraincnumnonzv</span>[,<span class="pl-k">-</span>findCorrelation(cor(<span class="pl-smi">pmltraincnumnonzv</span>[,<span class="pl-k">-</span><span class="pl-c1">1</span>]), <span class="pl-v">cutoff</span> <span class="pl-k">=</span> <span class="pl-c1">0.99</span>)]</pre></div>
+
+<p>This procedure removed the following 12 variables:</p>
+
+<div class="highlight highlight-source-r"><pre>colnames(<span class="pl-smi">pmltraincnumnonzv</span>[,findCorrelation(cor(<span class="pl-smi">pmltraincnumnonzv</span>[,<span class="pl-k">-</span><span class="pl-c1">1</span>]), <span class="pl-v">cutoff</span> <span class="pl-k">=</span> <span class="pl-c1">0.99</span>)])</pre></div>
+
+<h3>
+<a id="removing-near-zero-covariates" class="anchor" href="#removing-near-zero-covariates" aria-hidden="true"><span class="octicon octicon-link"></span></a>Removing Near Zero Covariates</h3>
+
+<p>I was still over 100 variables to include my model, so finally, I turned back to 
+the previously used <code>nearZeroVar()</code> function to identify not only zero 
+covariates but also <strong>near</strong> zero covariates.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">pmlfinaldata</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">pmltraincnumnonzvnoncorr</span>[,nearZeroVar(<span class="pl-smi">pmltraincnumnonzvnoncorr</span>,<span class="pl-v">saveMetrics</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>)<span class="pl-k">$</span><span class="pl-smi">nzv</span><span class="pl-k">==</span><span class="pl-c1">FALSE</span>]</pre></div>
+
+<p>This is a longer list of variables that have been flagged as low contributors to
+the total variability:</p>
+
+<div class="highlight highlight-source-r"><pre>rownames(
+    nearZeroVar(<span class="pl-smi">pmltraincnumnonzvnoncorr</span>,
+                <span class="pl-v">saveMetrics</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>)[nearZeroVar(<span class="pl-smi">pmltraincnumnonzvnoncorr</span>,
+                                                <span class="pl-v">saveMetrics</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>)<span class="pl-k">$</span><span class="pl-smi">nzv</span><span class="pl-k">==</span><span class="pl-c1">TRUE</span>,
+                                    ]
+        )</pre></div>
+
+<p>So I ended up with the following dataset to be analysed:</p>
+
+<div class="highlight highlight-source-r"><pre>str(<span class="pl-smi">pmlfinaldata</span>)</pre></div>
+
+<h1>
+<a id="model-fitting" class="anchor" href="#model-fitting" aria-hidden="true"><span class="octicon octicon-link"></span></a>Model Fitting</h1>
+
+<p>First, let's train a model with Random Forest, as it is a widely used classifier. (I
+could have used Linear Discriminants, multinomial logit, Support Vector 
+Machines, etc..)</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-c"># Make use of process parallelization</span>
+registerDoParallel(makeCluster(detectCores()))
+
+<span class="pl-c"># Train the model</span>
+<span class="pl-smi">mdl</span> <span class="pl-k">&lt;-</span> train(<span class="pl-smi">classe</span><span class="pl-k">~</span>., 
+             <span class="pl-v">data</span><span class="pl-k">=</span><span class="pl-smi">pmlfinaldata</span>, 
+             <span class="pl-v">method</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>rf<span class="pl-pds">"</span></span>, 
+             <span class="pl-v">trControl</span> <span class="pl-k">=</span> trainControl(<span class="pl-v">method</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>cv<span class="pl-pds">"</span></span>, <span class="pl-v">number</span> <span class="pl-k">=</span> <span class="pl-c1">5</span>, <span class="pl-v">allowParallel</span> <span class="pl-k">=</span> <span class="pl-c1">TRUE</span>)
+             )
+<span class="pl-smi">mdl</span>
+<span class="pl-smi">mdl</span><span class="pl-k">$</span><span class="pl-smi">finalModel</span></pre></div>
+
+<p>The model accuracy is really good, over 99%. Let's take a look at the confusion
+matrix:</p>
+
+<div class="highlight highlight-source-r"><pre>confusionMatrix(predict(<span class="pl-smi">mdl</span>,<span class="pl-smi">pmltestcnum</span>),<span class="pl-smi">pmltestcnum</span><span class="pl-k">$</span><span class="pl-smi">classe</span>)</pre></div>
+
+<p>According to model fitting results on the test set, I calculated the following
+Out Of Sample Error rate of my model:</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">prediction</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">mdl</span>,<span class="pl-smi">pmltestcnum</span>)
+<span class="pl-c"># Out of sample error percentage:</span>
+paste0(round(sum(<span class="pl-smi">pmltestcnum</span><span class="pl-k">$</span><span class="pl-smi">classe</span> <span class="pl-k">!=</span> <span class="pl-smi">prediction</span>)<span class="pl-k">/</span>length(<span class="pl-smi">prediction</span>)<span class="pl-k">*</span><span class="pl-c1">100</span>,<span class="pl-c1">2</span>),<span class="pl-s"><span class="pl-pds">"</span>%<span class="pl-pds">"</span></span>)</pre></div>
+
+<h1>
+<a id="submission" class="anchor" href="#submission" aria-hidden="true"><span class="octicon octicon-link"></span></a>Submission</h1>
+
+<p>For submission I read in the given test set that includes 20 observation.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-c"># Test dataset - for submission</span>
+<span class="pl-smi">orig_pml_test</span> <span class="pl-k">&lt;-</span> read.csv(<span class="pl-s"><span class="pl-pds">"</span>pml-testing.csv<span class="pl-pds">"</span></span>)</pre></div>
+
+<p>I use my previously defined model to predict the requested <code>classe</code> variable.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">subm_pred</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">mdl</span>,<span class="pl-smi">orig_pml_test</span>)
+<span class="pl-smi">subm_pred</span></pre></div>
+
+<p>I defined <code>pml_write_files</code> function to write out predictions into 20 separate 
+files. (Source: Practical Machine Learning, Course Project Submission 
+assignement instructions, 
+url=<a href="https://class.coursera.org/predmachlearn-034/assignment/view?assignment_id=5">https://class.coursera.org/predmachlearn-034/assignment/view?assignment_id=5</a>)</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-v">pml_write_files</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>){
+  <span class="pl-v">n</span> <span class="pl-k">=</span> length(<span class="pl-smi">x</span>)
+  <span class="pl-k">for</span>(<span class="pl-smi">i</span> <span class="pl-k">in</span> <span class="pl-c1">1</span><span class="pl-k">:</span><span class="pl-smi">n</span>){
+    <span class="pl-v">filename</span> <span class="pl-k">=</span> paste0(<span class="pl-s"><span class="pl-pds">"</span>problem_id_<span class="pl-pds">"</span></span>,<span class="pl-smi">i</span>,<span class="pl-s"><span class="pl-pds">"</span>.txt<span class="pl-pds">"</span></span>)
+    write.table(<span class="pl-smi">x</span>[<span class="pl-smi">i</span>],<span class="pl-v">file</span><span class="pl-k">=</span><span class="pl-smi">filename</span>,<span class="pl-v">quote</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>,<span class="pl-v">row.names</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>,<span class="pl-v">col.names</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>)
+  }
+}
+pml_write_files(<span class="pl-smi">subm_pred</span>)</pre></div>
+        </section>
+
+        <footer>
+          Practical Machine Learning Course Project is maintained by <a href="https://github.com/attilatoth86">attilatoth86</a><br>
+          This page was generated by <a href="https://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
