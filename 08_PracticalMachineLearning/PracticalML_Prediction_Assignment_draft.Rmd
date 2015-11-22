@@ -26,8 +26,8 @@ the section on the Weight Lifting Exercise Dataset).
  - The test data are available here: 
  https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 
-Let's download if they are not yet in the working directory and load them into 
-memory.
+Let's download them if they are not yet in the working directory and load them 
+into memory.
 
 ```{r cache=TRUE}
 if(file.exists("pml-training.csv")==FALSE) 
@@ -44,14 +44,12 @@ if(file.exists("pml-testing.csv")==FALSE)
                   #,method="curl"
                   )
      }
+# Training dataset goes to variables with 'pml' prefix
 pml <- read.csv("pml-training.csv")
-orig_pml_test <- read.csv("pml-testing.csv")
 ```
 
 The data for this project come from this source: 
-http://groupware.les.inf.puc-rio.br/har. If you use the document you create for 
-this class for any purpose please cite them as they have been very generous in 
-allowing their data to be used for this kind of assignment. 
+http://groupware.les.inf.puc-rio.br/har.
 
 # Goal
 
@@ -61,33 +59,40 @@ variables are allowed use for prediction. This report describes how the model
 was built, how cross validation was used, what the expected out of sample error 
 is, and why or how the choices were made.
 
-# Exploratory Data Analysis
+# Preconditions
 
 Let's load the necessary packages.
 
+ - `caret` for machnine learning libraries
+ - `plyr` & `dplyr` for data manipulation
+ - `doParallel` for exploiting the power of multi core machines
+
 ```{r}
 library(caret)
+library(plyr)
+library(dplyr)
+library(doParallel)
 ```
 
-"Setting seed" for reproducible results.
+I am "setting seed" for reproducible results.
 
 ```{r}
 set.seed(1234)
 ```
 
-## Data splitting
+# Data splitting
 
-As always, my first step is to slice up our given dataset to training and 
-testing datasets. Testing dataset will not be touched until my model is ready.
+As always, my first step is to slice up our given 'testing' dataset to training 
+and testing datasets that enables us to estimate out of sample error of a 
+particular model. Testing dataset will not be touched until my model is ready.
 Thus, any type of exploratory data analysis will be executed only on training 
-set to avoid my model to be biased by testing data part.
+set to avoid my model to be biased by testing data part. I used a randomly 
+selected 75% of original training set to train my model.
 
 ```{r}
 intrain <- createDataPartition(y = pml$classe, p=0.75, list=FALSE)
 pmltrain <- pml[intrain,]
 pmltest <- pml[-intrain,]
-
-# to be considered: K-fold
 ```
 
 Let's take a look at the training dataset and the predictable outcome variable.
@@ -97,40 +102,218 @@ str(pmltrain, list.len = 200)
 summary(pmltrain$classe)
 ```
 
-I decided to remove `user_name` since it would bring bias in the prediction 
+# Data Transformation and Processing
+
+I decided to remove `user_name` since it can bring bias in the prediction 
 (overfitting to this specific dataset) but would not add to the prediction power 
 of a generalized model. (E.g. if Carlitos always performed his exercise 
 correctly then learning algorythms would make use of this information and apply
 this information for prediction. However, it might be useful information for our
-given test set but for generalized model, where we do not have the any user 
-information, obviously it adds no value.)
+given test set but not for generalized model, where we do not have the any user 
+information.)
+
+Also, removal of timestamp fields (i.e. `raw_timestamp_part_1`, 
+`raw_timestamp_part_2`, `cvtd_timestamp`) makes sense, since these measures do
+not add any value for a general model. In the time of this analysis meaning of 
+variables of `new_window` & `num_window` were unknown for me but they clearly 
+not reflect accelerometer measures so I left them out from the further analysis.
+Variable of `X` has been ignored upfront as well, since it represents a simple
+record identifier.
 
 ```{r}
-pmltrain <- pmltrain[,-2]
+pmltrainc <- pmltrain %>% select(-X,
+                                 -user_name,
+                                 -raw_timestamp_part_1,
+                                 -raw_timestamp_part_2,
+                                 -cvtd_timestamp,
+                                 -new_window,
+                                 -num_window,
+                                 -classe)
 ```
 
-`raw_timestamp_part_1`, 'raw_timestamp_part_2', 'cvtd_timestamp'
-
-Check for zero covariates (features with zero or close to zero variance), and
-see if I can remove them from dataset.
+I found that several factor variables were actually containing numeric
+information. Just to make sure that a simple factor-numeric conversion would not
+fail, I checked the levels for all factor variables.
 
 ```{r}
-nsv <- nearZeroVar(pmltrain,saveMetrics=TRUE)
-nsv
-
-# pmltrain <- pmltrain[,nsv$nzv==FALSE]
+sapply(pmltrainc[,sapply(pmltrainc,is.factor)],levels)
 ```
 
-Some variables are classified as near-to-zero-variable but none of them is
-actually zero. So at this point I keep them.
+Two particular values, `#DIV/0!` and empty values bring some data quality issue,
+so I handled it by replacing them with `NA`.
 
-Let's train a model with Random Forest, as it is a widely used classifier. (I
+```{r}
+pmltrainc[pmltrainc=="#DIV/0!"] <- NA
+pmltrainc[pmltrainc==""] <- NA
+```
+
+Then I converted all the factor variables to numeric.
+
+```{r}
+# http://stackoverflow.com/questions/8596466/r-change-all-columns-of-type-factor-to-numeric
+# Applying the wisdom from Carl Witthoft above:
+asNumeric <- function(x) as.numeric(as.character(x))
+factorsNumeric <- function(d) modifyList(d, lapply(d[, sapply(d, is.factor)],   
+                                                   asNumeric))
+
+# Convert to numeric
+pmltraincnum <- factorsNumeric(pmltrainc)
+```
+
+To avoid model building errors, I replaced NAs with zeros.
+
+```{r}
+pmltraincnum[is.na(pmltraincnum)] <- 0
+```
+
+Eventually I finalized the dataset for further analyses by including `classe`
+target variable.
+
+```{r}
+pmltraincnum <- cbind(classe=pmltrain$classe,pmltraincnum)
+```
+
+These transformations have to be performed on test dataset as well.
+
+```{r}
+pmltestc <- pmltest %>% select(-X,
+                               -user_name,
+                               -raw_timestamp_part_1,
+                               -raw_timestamp_part_2,
+                               -cvtd_timestamp,
+                               -new_window,
+                               -num_window,
+                               -classe)
+pmltestc[pmltestc=="#DIV/0!"] <- NA
+pmltestc[pmltestc==""] <- NA
+pmltestcnum <- factorsNumeric(pmltestc)
+pmltestcnum[is.na(pmltestcnum)] <- 0
+pmltestcnum <- cbind(classe=pmltest$classe,pmltestcnum)
+```
+
+## Dimension Reduction
+
+In order to build robust prediction model I needed to reduct the number of
+independent variables. At this stage I still had 152 variables that is too much
+for building a classifier model on top of that which returns results in a
+reasonable time frame.
+
+### Removing Zero Covariates
+
+The first and most obvious task to be performed here is to identify and filter
+out covariates with zero variance. (Since they will not have any explanation
+power on my model for sure.)
+
+```{r}
+pmltraincnumnonzv <- pmltraincnum[,nearZeroVar(pmltraincnum,
+                                               saveMetrics=TRUE)$zeroVar==FALSE]
+```
+
+The following 9 variables have been filter out in this step:
+
+```{r}
+rownames(
+    nearZeroVar(pmltraincnum,
+                saveMetrics=TRUE)[nearZeroVar(pmltraincnum,
+                                              saveMetrics=TRUE)$zeroVar==TRUE,
+                                  ]
+        )
+```
+
+### Removing correlated predictors
+
+In this section I considered to remove those predictors that have high (>0.99) 
+correlation with one ore more other predictors, as they bring redundancy in the
+model. (Correlation over 0.99 shows very high similarity between variables.)
+
+```{r}
+pmltraincnumnonzvnoncorr <- pmltraincnumnonzv[,-findCorrelation(cor(pmltraincnumnonzv[,-1]), cutoff = 0.99)]
+```
+
+This procedure removed the following 12 variables:
+
+```{r}
+colnames(pmltraincnumnonzv[,findCorrelation(cor(pmltraincnumnonzv[,-1]), cutoff = 0.99)])
+```
+
+### Removing Near Zero Covariates
+
+I was still over 100 variables to include my model, so finally, I turned back to 
+the previously used `nearZeroVar()` function to identify not only zero 
+covariates but also **near** zero covariates.
+
+```{r}
+pmlfinaldata <- pmltraincnumnonzvnoncorr[,nearZeroVar(pmltraincnumnonzvnoncorr,saveMetrics = TRUE)$nzv==FALSE]
+```
+
+This is a longer list of variables that have been flagged as low contributors to
+the total variability:
+
+```{r}
+rownames(
+    nearZeroVar(pmltraincnumnonzvnoncorr,
+                saveMetrics = TRUE)[nearZeroVar(pmltraincnumnonzvnoncorr,
+                                                saveMetrics = TRUE)$nzv==TRUE,
+                                    ]
+        )
+```
+
+So I ended up with the following dataset to be analysed:
+
+```{r}
+str(pmlfinaldata)
+```
+
+# Model Fitting
+
+First, let's train a model with Random Forest, as it is a widely used classifier. (I
 could have used Linear Discriminants, multinomial logit, Support Vector 
 Machines, etc..)
 
 ```{r cache=TRUE}
-mdl <- train(classe~., data=pmltrain, method = "rf")
+# Make use of process parallelization
+registerDoParallel(makeCluster(detectCores()))
 
+# Train the model
+mdl <- train(classe~., 
+             data=pmlfinaldata, 
+             method = "rf", 
+             trControl = trainControl(method = "cv", number = 5, allowParallel = TRUE)
+             )
+mdl
+mdl$finalModel
+```
+
+The model accuracy is really good, over 99%. Let's take a look at the confusion
+matrix:
+
+```{r}
+confusionMatrix(predict(mdl,pmltestcnum),pmltestcnum$classe)
+```
+
+According to model fitting results on the test set, I calculated the following
+Out Of Sample Error rate of my model:
+
+```{r}
+prediction <- predict(mdl,pmltestcnum)
+# Out of sample error percentage:
+paste0(round(sum(pmltestcnum$classe != prediction)/length(prediction)*100,2),"%")
+```
+
+# Submission
+
+For submission I read in the given test set that includes 20 observation.
+
+```{r}
+# Test dataset - for submission
+orig_pml_test <- read.csv("pml-testing.csv")
+```
+
+I use my previously defined model to predict the requested `classe` variable.
+
+```{r}
+subm_pred <- predict(mdl,orig_pml_test)
+subm_pred
 ```
 
 I defined `pml_write_files` function to write out predictions into 20 separate 
@@ -146,5 +329,6 @@ pml_write_files = function(x){
     write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
   }
 }
+pml_write_files(subm_pred)
 ```
 
