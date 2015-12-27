@@ -1,0 +1,60 @@
+Course Project of Developing Data Products
+========================================================
+author: Attila Toth
+date: 27 Dec 2015
+
+Project Objectives
+========================================================
+
+In the framework of this course the peer project consists
+of an individual Shiny application. The outcome should
+meet the following criteria:
+
+- Intuitive UI (easy to use)
+- Deployed to RStudio's Shiny server
+- Forms for user input/interactions
+- Create a UI that generates some input for server.R
+- Reactive output(s)
+
+Data
+========================================================
+
+For this task I used a widely known, easy dataset that
+comes along with every R distribution, the so-called
+**mtcars**.
+
+```{r}
+str(mtcars)
+```
+
+Application Overview - Simple Browsing
+========================================================
+
+My application aims to help users in discovering this 
+particular dataset. Users can interactively explore what
+data are collected and stored about each models. This is
+provided through a dynamic table controlled by a dropdrown list.
+
+![Screenshot 1 - Simple Model Browsing](scrnsht1.png) 
+
+Application Overview - Plotting Variables
+========================================================
+`mtcars` was collected to examine Miles Per Gallon 
+performance for each car model. With this part of the 
+application, users can discover main factors (variables) 
+that actually drive this attribute of cars. The application 
+lets users to visualize the relationship between 'mpg' 
+(Miles Per Gallon) and an arbitrary attributes.
+
+A simple example:
+
+```{r, echo=FALSE, fig.align="center"}
+library(ggplot2)
+qplot(data=mtcars,
+      y=mpg, 
+      x=wt,
+      ylab="Miles per gallon",
+      xlab="Weight in 1000 lbs",
+      geom=c("point","smooth"), 
+      method="lm")
+```
