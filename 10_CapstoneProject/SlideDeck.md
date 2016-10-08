@@ -31,8 +31,7 @@ pipeline can be redone partially if needed.
  - Text processing: this component uses `quanteda` package to create 
  document-feature matrix and (1-2-3) ngrams
  - N-Gram modeling: calculates and stores ngram frequencies for prediction
- 
-All relevant code is accessible via my GitHub account.
+
 
 Application Description
 ========================================================
@@ -42,6 +41,8 @@ The following high-level information is important about the application
  - Prediction runs on a pre-processed, sample dataset (representing 10% of the 
  original dataset)
  - Prediction model uses maximum likelihood estimations
+ 
+All relevant code is accessible via my GitHub [account](https://github.com/attilatoth86/datasciencecoursera).
 
 Application Usage Instruction
 ========================================================

@@ -1,5 +1,6 @@
 rm(list=ls())
-library(dplyr, plyr)
+library(plyr)
+library(dplyr)
 
 dl_file <- function(){
     if(!file.exists("data.zip")==TRUE){
@@ -8,8 +9,10 @@ dl_file <- function(){
                       method="curl")
         unzip("data.zip")
         print("data.zip file has been successfully downloaded & unzipped from https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip!")
-    }    
-    print("data.zip file already exists! It has been successfully unzipped now!")
+    }
+    else{
+        print("data.zip file already exists! It has been successfully unzipped now!")    
+    }
 }
 run_analysis <- function(){
     if(!file.exists("UCI HAR Dataset")==TRUE) {
