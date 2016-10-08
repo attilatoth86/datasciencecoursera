@@ -1,0 +1,365 @@
+Some guidance for the prediction model
+https://www.coursera.org/learn/data-science-project/discussions/V40gAPE3EeWFuw7QEATDpw
+
+http://english.boisestate.edu/johnfry/files/2013/04/bigram-2x2.pdf
+
+P(A,B,C,D)=P(A)P(B|A)P(C|A,B)P(D|A,B,C)
+P(its,water,is,so)=P(its)P(water|its)P(is|its water)P(so|its,water,is)
+
+P(A,B)=P(A)P(B|A)
+
+
+https://rpubs.com/Bennn/49159
+
+
+https://github.com/vruizext/text-prediction-Ractivi
+
+================================================================================
+
+https://servo.shinyapps.io/text-psychic/
+
+https://blackszu.shinyapps.io/ioWordApp/
+http://rpubs.com/blackszu/174270
+
+Daniel Bancovsky
+----------------
+1)After tokenizing the data we should start building our model.
+
+2)We have a problem with our data since it is just a limited sample of the huge lexicon of English Language.
+
+a) to solve this we have to smooth our data, to give the actual probabilities of unseen events, which although weren't collected in our sample do exist.
+b) we have to recalculate the probabilities of our sample accounting for this mass probability of unseen events
+c) a lot of the next level estimators require us to account for this unseen probability
+We have a lot of possibilities to smooth our data, but the one I understand (and know hot to apply thanks to an article someone posted in this forum) is the Good-Turing.
+3)Good-Turing Smoothing
+
+a) Basically we are taking out probability of seen events and giving to unseen events.
+b) how? The GT assumption is that every event with count = 1 is "the same" as an event with count = 0, it was just luck we caught them in our sample.
+c) so it estimates the Mass probability of Unseen events as C(events with freq 1)/ c(all events)
+d) we still have to learn how to distribute this Mass of Unseen events to each unseen event (gram)
+e) the new count/ probability estimated depends of a lot of factors and counts, and sometimes it will be disturbed by an event which by chance got a 0 frequency or very low frequency
+f) to solve this, the Simple Good-Turing fit a linear regression line to the values of frequency of frequencies and choose which value to use (the actual value or the linear estimated value) based on a threshold - if the estimated value is too different from the raw value we use the raw value, otherwise we use the linear fitted.
+4) Choosing how to predict: Backoff or Interpolation?
+
+a) all these methods require that we save probability mass for the unseen events, so either you use the Good-Turing probabilities you calculated, or just some Absolute Discount (between 0 and 1, discounting the same for every probability in you Sample)
+5) Backoff - Katz Backoff
+
+a) your model check for the existence of the high order gram, if it doesn't exist, it backoffs to the lower order gram.
+b) If it exists it simply gives the gram probability c'(Ngram)/c(N-1 gram) where c'= the new count you calculated with the discounting method.
+c) the lower order gram probability should be multiplied by an alfa (otherwise the sum of all probabilities would be higher than 1), which is the real probability reserved for this unseen event.
+d) this alfa is simply 1- sum(all Ngrams preceded by N-1 gram) I.e : You want to know the P(coke|I want), but you don't have "I want coke" in your trigrams. You should back off to P(coke|want), but to do so, you first have to do 1- sum (of the c' counts of all trigrams preceded by (I want)) in your corpus ( the probability of unseen events- words- after "I want" which didn't appear in your Sample. After knowing this reserved probability multiply it by the probability of "coke" given "want.
+e) In our project, in which we are trying to predict the next word, the sum of all those trigrams preceded by ("I want") will be 0, otherwise we wouldn't backoff. i.e: if we had a trigram Preceded by "I want" we would assume that this is the right next word.
+f) since 1-0 = 1, our alfa, for the prediction model will be 1.
+6) Interpolation
+
+a)Instead of backing off to lower grams, we actually use all the grams in our model
+b)We give different weights to our Gram Order probability i.e: we multiply the probability of a word by a Lambda for the Trigram, a different Lambda for Bigram a different Lambda for the Unigram
+c) all the lambdas must sum up to 1 P(coke|I want) = L1*P(coke|I want) + L2* P(coke|want)+L3*P(coke). -- al the probabilities are discounted probabilities
+d) to find the best lambda you should fix all the other values and run a iteration which will find the values of lambda which maximize the probabilities (you should do this in a held-out set, not the test set). I've read that EM methods or POWELL methods would do that (But I still haven't checked what it means)
+e) Kneser-Ney interpolation is one kind which will use absolute discounts and will account for context when checking on lower order grams, giving a PContinuation (still have to check it better)
+7) checking your model (still have to check it)
+
+You can check it in you test corpus, word by word or
+calculating the Perplexity
+
+--------------------------------------------------------------------------------
+
+BIGRAMS AND TRIGRAMS
+John Fry
+Boise State University
+http://english.boisestate.edu/johnfry/files/2013/04/bigram-2x2.pdf
+
+--------------------------------------------------------------------------------
+
+Speech and Language Processing. Daniel Jurafsky & James H. Martin: N-Grams
+https://lagunita.stanford.edu/c4x/Engineering/CS-224N/asset/slp4.pdf
+
+--------------------------------------------------------------------------------
+
+N-gram Modeling With Markov Chains
+http://sookocheff.com/post/nlp/ngram-modeling-with-markov-chains/
+
+--------------------------------------------------------------------------------
+
+A Closer Look at Skip-gram Modelling
+http://homepages.inf.ed.ac.uk/ballison/pdf/lrec_skipgrams.pdf
+
+--------------------------------------------------------------------------------
+
+Thach-Ngoc TRAN
+After the past few days of researching, I have some feeling on how the prediction approach should work in THIS project. Note: these are my interpretation in layman's terms (may be incorrect).
+
+1). We need smoothing techniques because:
+
+Everything should have probabilites large than zero. Zero probabilities happen because the dataset given is limited. There could be many texts on the wild that don't appear in dataset. We need larger-than-zero probabilities because we need to compare things to make decisions accordingly, like "0.0000023 still larger than 0.0000000042". Do 'whatever' to avoid zero probabilities. Some things increase, meaning that some things else must decrease because sum of all probabilities is 1. This is the sense of the term "discount" in the literature.
+More contexts should be considered when calculating the probability for a given text, rather than just the single context 'right at the text'. For example, text: W1 W2 W3 W4. Naive approaches only take into account of context "W1 W2 W3", and nothing more. If there is no "W1 W2 W3" in the model? Well, zero probability (for W1 W2 W3 W4). We need to fix this by smoothing. Get involved with more contexts, and we likely have some other context gives some probability for "W1 W2 W3 W4".
+2). The smoothing techniques, such as Katz backoff, (modified) Kneser-Ney, were invented in the context of calculating the relevance of a given text (avoid zero probability), provided that the training data is limited (Simply we cannot capture all the words in the wild). They are not originally made for "prediction" tasks. However, clever use of these techniques can be helpful in prediction.
+
+The problem with the example "W1 W2 W3 W4" above is that only single context is considered. We may have "W1 W2 W3 W4B", "W1 W2 W3 W4C", and in the dataset, it happens to be: count("W1 W2 W3 W4") > count("W1 W2 W3 W4B") > count("W1 W2 W3 W4C"). Naively, we immediately choose W4. But if additionally considering contexts: "W2 W3 W4", "W2 W3 W4B" (3-gram); "W3 W4", "W3 W4B" (2-gram), and so on. It could be that Relevance("W1 W2 W3 W4B") > Relevance("W1 W2 W3 W4"). So W4B should be the right word for prediction. This is where different smoothing techniques have different function "Relevance()".
+3). It seems there are two popular smoothing techniques: Katz backoff and Kneser-Ney. modified Kneser-Ney. Regarding performance, "Katz": generally good; "Kneser-Ney": very good; modified Kneser-Ney: outperform every other technique consistenly. However, during the lecture videos, Roger Peng mentioned "Katz". Maybe, to their expectation, Katz is "good enough" for THIS project (in the sense: simpler than Kneser, decent accuracy, easy to understand, etc.) And they don't expect us to be "experts" in NLP, especially in a limited time frame. My point is we have to find something fast to finish this project and get it done decently. Then, when having more time, we can wander around, try this and that...
+
+4). The algorithm for THIS project may work like this:
+
+Using one smoothing technique to calculate probabilities that hopefully effectively consider more contexts. Thus, best avoid having zero probability.
+We build 1-gram, 2-gram, 3-gram (or even 4-gram?) models. Given a text, extract last 2 words, say: A-B, check these two words with 3-gram table, we may find: A-B-X, A-B-Y, A-B-Z. Calculating probabilities for these (Remind: smoothed probability), return the word with max probability.
+If in 3-gram, we don't have A-B, we step back to 2-gram table, and do the same process. We may find: B-K, B-R, B-U...
+Probably it's a good idea to give more options to end-users, rather than just the most relevant predicted word. Additionally, also the second-most? The third-most?
+In the n-gram table, e.g: 3-gram, we may have: A-B-X (100 times), A-B-Y (80 times), A-B-Z (70 times), A-B-L (10 times), A-B-M (5 times)... The A-B-L, A-B-M should be removed to save memory... (ShinyApps's max memory is 1 GB, free account).
+
+--------------------------------------------------------------------------------
+
+Natural Language Processing Tutorial
+http://www.vikparuchuri.com/blog/natural-language-processing-tutorial/
+
+--------------------------------------------------------------------------------
+
+Natural Language Processing Notes for Lectures 2 and 3, Fall 2012
+http://web.mit.edu/6.863/www/fall2012/lectures/lecture2&3-notes12.pdf
+
+--------------------------------------------------------------------------------
+
+Here is a simple description of how I use the N-gram model to predict the next word:
+
+1) Pick the size of the n-gram to use to match the last part of a phrase. For example to use a well worn example from Jurafsky, say your phrase is: "its water is so transparent that" and we pick a bigram (n=2) to match on.
+
+2) Count all the instances in your corpus for your n-gram and call it C1. For example, the count all instances of "transparent that" may be 777.
+
+3) Next, find all the (n+1)-grams that start with your chosen n-gram. For example, find all the trigrams that start with the bigram "transparent that" and count the instances of each unique trigram. For example, "transparent that the" may occur 73 times, "transparent that most" may occur 21 times, and "transparent that my" may occur 6 times.
+
+4) Next, calculate the probability of each (n+1)-gram. The last word of the (n+1)-gram with the highest of the these probabilities would be your prediction. For example,
+
+P(the | transparent that) = 73 / 100 = 0.73
+
+P(most | transparent that) = 21 / 100 = 0.21
+
+P(my | transparent that) = 6 / 100 = 0.06
+
+In this case, we'd predict that "the" is the most likely next word for our chosen bigram. If we were using trigrams instead of bigrams, the above calculations would be:
+
+P(the | so transparent that) = x1 / (x1 + x2 +x3)
+
+P(most | so transparent that) = x2 / (x1 + x2 +x3)
+
+P(my | so transparent that) = x3 / (x1 + x2 +x3)
+
+I got 8/10 on quiz 2 on my first attempt executing the above method manually (grep'ing all three en_US corpus files to get my counts) so as to get a good feel for how the algorithm worked. On the 8 I got right, the correct option was the most frequent term that following a 4-gram match for x of the questions a trigram match on y of the questions and a bigram match on z of the questions. On the two I got wrong, I looked for the most frequent trigram that matched the bigrams in the bracketed terms:
+
+Very early observations on the Bills game: Offense still struggling [but the]
+
+Go on a romantic date [at the]
+
+Did anyone predict the next word of either of the two above phrases correctly using an straight n-gram model approach? If so, did you predict from a bigram match and finding the highest frequency trigram?
+
+On the phrase: "Ohhhhh #PointBreak is on tomorrow. Love that film and haven't seen it in quite some"
+
+I found a single 4-gram (it in quite some) the word following it happened to be most frequent
+
+On the phrase: "After the ice bucket challenge Louis will push his long wet hair out of his eyes with his little"
+
+I found no 4-gram matches (eyes with his little), found many trigram matches, but found that there were 11 words that were more frequent than any of the quiz option. I took the most frequent option presented and got it right, but was code supposed to give the right answer? Had I been making an actual prediction, I would used another word.
+
+On the phrase: "If this isn't the cutest thing you've ever seen, then you must be"
+
+I found 11 matches on the 4-gram [then you must be], but none of the words that followed were options on the quiz. I then backed off and matched the trigram and found 100's of matches, but like the "...eyes with his little" phrase, the most frequent words that followed where not options available on the quiz. I backed off an matched the trigram, and got the same results (bunch of matches, but no next words that were quiz options). I then backed off again, matched the bigram, and took the most frequently available option even though it was not the most frequently occuring word to follow the bigram.
+
+This was and "interesting" (although somwhat frustrating) excercise. Am really curious what you folks found on this.
+
+Got the "romantic date..." one by fixing a bug in my code, matching the bigram and looking for the highest frequency "at the x" that was an available option. UPDATE: On this one, I still had hundreds of trigram matches and two 4-grams that provided predictions that were quiz options, so some kind of interpolation must be incorporated to get at this correct answer. Agreed?
+
+I'm just learning about interpolation and am guessing this explains why backing off to the smaller n n-gram worked in some cases.
+
+On the "Offense is still struggling..." phrase, when I dropped back to matching the bigram and predicting with the trigram "but the x", I still got it wrong using the next highest frequency x, so I ended up making a guess at what "seemed reasonable" and got it right.
+
+I would really like to know how to have gotten the phrase I guessed at using a reasonable model instead of using my brains' ability to make a good guess. Was anyone able to do this?
+
+
+--------------------------------------------------------------------------------
+
+Implementation of Modified Kneser-Ney Smoothing on Top of Generalized Language Models for Next Word Prediction
+https://west.uni-koblenz.de/sites/default/files/BachelorArbeit_MartinKoerner.pdf
+
+
+Introduction to Kneser-Ney Smoothing on Top of Generalized Language Models for Next Word Prediction
+http://mkoerner.de/media/oberseminar-2013-07-25.pdf
+
+
+An Empirical Study of Smo othing Techniques for Language Modeling
+http://www.speech.sri.com/projects/srilm/manpages/pdfs/chen-goodman-tr-10-98.pdf
+
+http://momobo.github.io/Capstone_Doc/Final_Report.html
+
+http://www.frontgatemedia.com/a-list-of-723-bad-words-to-blacklist-and-how-to-use-facebooks-moderation-tool/
+http://urbanoalvarez.es/blog/2008/04/04/bad-words-list/
+
+http://stp.lingfil.uu.se/~santinim/ml/2014/JurafskyMartinSpeechAndLanguageProcessing2ed_draft%202007.pdf
+
+http://www.cs.pomona.edu/~dkauchak/classes/s11/cs159-s11/lectures/159-5-LM.pdf
+
+Speech and Language Processing: An introduction to natural language processing (Jurafsky & Martin, 2007) (NOTE: Enormous book dealing with all aspects of NLP, computational linguistics, etc. Chapter 4 deals with N-Grams)
+
+http://stp.lingfil.uu.se/~santinim/ml/2014/JurafskyMartinSpeechAndLanguageProcessing2ed_draft%202007.pdf
+
+n-gram paper:
+
+https://lagunita.stanford.edu/c4x/Engineering/CS-224N/asset/slp4.pdf
+
+N-gram models:
+
+http://www.cs.cornell.edu/courses/cs4740/2014sp/lectures/smoothing+backoff.pdf
+
+Introduction to generative models of language:
+
+http://www.cs.cornell.edu/courses/cs4740/2014sp/lectures/n-gram-models-2.pdf
+
+Markov Chains Visual explanation:
+
+http://setosa.io/ev/markov-chains/
+
+Markov Chain Vignette:
+
+https://cran.r-project.org/web/packages/markovchain/vignettes/an_introduction_to_markovchain_package.pdf
+
+Good quanteda tutorial/exercise:
+
+http://www.kenbenoit.net/courses/nyu2014qta/exercise1.html
+
+Quanteda Vignette/Quick Start:
+
+https://cran.rstudio.com/web/packages/quanteda/vignettes/quickstart.html
+
+Profanity/Bad Words:
+
+http://www.frontgatemedia.com/a-list-of-723-bad-words-to-blacklist-and-how-to-use-facebooks-moderation-tool/
+
+http://urbanoalvarez.es/blog/2008/04/04/bad-words-list/
+
+Smoothing Tutorial:
+
+http://nlp.stanford.edu/%7Ewcmac/papers/20050421-smoothing-tutorial.pdf
+
+Here are the links I gathered from existing threads, mostly ignoring cran and r package links.
+
+https://www.coursera.org/learn/data-science-project/discussions/z3S8mOiAEeWcTQpIg9bO1w/replies/Dc1E1uxgEeWfwAohgaM63Q
+
+Daniel Bancovsky · 9 days ago · Edited
+
+http://stp.lingfil.uu.se/~santinim/ml/2014/JurafskyMartinSpeechAndLanguageProcessing2ed_draft%202007.pdf
+
+-This Book is the full book of the chapter provided by Uthpala (just in case someone was interested, but I think only chapter 4 is useful for this project)
+
+http://www.modsimworld.org/papers/2015/Natural_Language_Processing.pdf
+
+-this one is a published article of someone based in this Coursera Capstone, it provides really good insight and guidance.
+
+https://west.uni-koblenz.de/sites/default/files/BachelorArbeit_MartinKoerner.pdf
+
+-This thesis also has a really detailed explanation of the topics needed for this Capstone.
+
+this link http://www.cs.pomona.edu/~dkauchak/classes/s11/cs159-s11/lectures/159-5-LM.pdf , on page 13 to 15, illustrates very nicely the necessity to divide your Corpus in training and testing and the application of machine learning on optimizing your smoothing/ modeling accuracy.
+
+#############################
+
+posted by Peter Hughes
+
+For anyone who's interested here's a good paper on efficient implementations of n-gram models: http://nlp.cs.berkeley.edu/pubs/Pauls-Klein_2011_LM_paper.pdf
+
+############################
+
+papers on Good-Turing
+
+https://www.coursera.org/learn/data-science-project/discussions/MNyrF-60EeWB0QpuSDkq-Q/replies/Ol9jOvAUEeWqSQ7kx0rpLQ
+
+The original paper with the algorithm for Good-Turing is available at http://www.grsampson.net/AGtf1.html
+
+see also
+
+http://kochanski.org/gpk/teaching/0401Oxford/GoodTuring.pdf0
+
+#############################
+
+Bench-marking
+
+From Ray Jones, Mentor, I posted this a couple of weeks ago (so it's lost somewhere down the pages): You can benchmark your code using this: https://github.com/hfoffani/dsci-benchmark The repository is by Hernán Martínez Foffani, from the original code by Jan Hagelauer. The password for data.zip is: capstone4.
+
+I'm not sure where this benchmark code gets its test data set from but it is very pessimistic - I found that if you can get near to 15% 1st word prediction accuracy using this benchmark then that equates to about 40-60% 1st word accuracy in real world performance.
+
+#############################
+
+Good thread with links to bad words
+
+https://www.coursera.org/learn/data-science-project/discussions/oCgRdeYvEeWchRLuIyhEMw/replies/H6dc0OZCEeW9lxKw6HUZ1Q
+
+##############################
+
+Word Clouds
+
+https://www.coursera.org/learn/data-science-project/discussions/2pf4bfEjEeWlJhJpbKSYeQ
+
+##############################
+
+From Nelson Iglesias
+
+Helpful document for building prediction model
+
+Prediction Model · 4 days ago
+
+For anyone still thinking about the theory behind the model, here is a helpful link:
+
+http://medialab.di.unipi.it/web/Language+Intelligence/Prediction.pdf
+
+##############################
+
+from Miguel Sanchez
+
+A PDF book about natural language processing
+
+Overview, Understanding the Problem, and Getting the Data · 19 days ago
+
+I found this book about natural language processing that seems easy to understand. Unfortunately, it used Haskel as main language for the code examples.
+
+Here it is:
+
+https://openlibra.com/en/book/download/natural-language-processing-for-the-working-programmer
+
+#############################
+
+"A Closer Look at Skip-Gram Modeling":
+
+http://homepages.inf.ed.ac.uk/ballison/pdf/lrec_skipgrams.pdf
+
+
+Kneser-Ney Smoothing by Smitha Milli
+
+Implementation of Modified Kneser-Ney Smoothing on Top of Generalized Language Models for Next Word Prediction by Martin Christian Körner (also posted above under a different link)
+http://mkoerner.de/media/bachelor-thesis.pdf
+
+easy to read primer on Kneser-Ney smoothing
+
+http://www.foldl.me/2014/kneser-ney-smoothing/
+
+https://class.coursera.org/nlp/lecture/20
+
+I found this video after reading the above primer, it is very instructive in understanding kneser-ney smoothing if it helps you to hear someone explain the algorithm.
+
+http://www.sciencedirect.com/science/article/pii/S0024379507002169
+
+
+For combining Skip Grams and Modified Kneser-Ney Smoothing
+
+http://aclweb.org/anthology/P/P14/P14-1108.pdf
+
+When building the prediction model in Shiny application, I found the following articles are very useful:
+
+Use R scripts and data: http://shiny.rstudio.com/tutorial/lesson5/
+
+How to use isolate to avoid dependency: http://shiny.rstudio.com/articles/isolation.html
+
+http://shiny.rstudio.com/articles/persistent-data-storage.html
+
+http://www.modsimworld.org/papers/2015/Natural_Language_Processing.pdf
+
+https://openlibra.com/en/book/natural-language-processing-for-the-working-programmer
+
+
+
+http://momobo.github.io/Capstone_Doc/Final_Report.html

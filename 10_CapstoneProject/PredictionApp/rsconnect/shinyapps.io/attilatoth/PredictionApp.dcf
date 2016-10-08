@@ -1,0 +1,10 @@
+name: PredictionApp
+account: attilatoth
+server: shinyapps.io
+appId: 130307
+bundleId: 580408
+url: https://attilatoth.shinyapps.io/PredictionApp/
+when: 1475931082.79946
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: 00_textObject.RData|01_sampled0.01TextObject.RData|02_sampled0.01CorpusObject.RData|_archive/server.R|_archive/ui.R

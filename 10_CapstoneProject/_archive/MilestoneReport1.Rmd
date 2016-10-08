@@ -1,0 +1,303 @@
+---
+title: "Milestone Report - Data Science Capstone"
+author: "Attila Toth"
+date: "25 March 2016"
+output: html_document
+---
+
+This document aims to present the most recent achievements in the capstone 
+project of Data Science Specialization offered on Coursera by Johns Hopkins
+University.
+
+The ultimate goal of this project is to create a data application that can 
+predict the next word while typing arbitrary text.
+
+# Goals in Milestone Report
+
+This report aims to explain exploratory analysis and goals for the eventual app 
+and algorithm. It should present the major features of the data, briefly summary 
+of plans for creating the prediction algorithm and Shiny app.
+
+Th following main criteria are to be met:
+1. Demonstration of having the data downloaded and successfully loaded into R
+2. Creation of a basic report of summary statistics about the data sets
+3. Reporting on any interesting findings
+
+# Initialization
+
+This chapter wraps up the initial setup activities, i.e. loading of necessary
+packages, variables, etc.
+
+```{r Initialization, warning=FALSE}
+# Clear environment
+rm(list=ls())
+setwd("GitHub/datasciencecoursera/10_CapstoneProject/")
+
+# Load libraries
+
+## String operations
+library(stringi)
+## Graphs
+library(ggplot2)
+library(gridExtra)
+## Text mining
+library(quanteda)
+## Export capabilities
+library(knitr)
+
+
+# Setup general variables
+
+## Paths of files to be processed
+filePathblog <- "final/en_US/en_US.blogs.txt"
+filePathnews <- "final/en_US/en_US.news.txt"
+filePathtwitter <- "final/en_US/en_US.twitter.txt"
+```
+
+# Data Overview
+
+The foundation of the application will be a set of text provided by the course. 
+They are extracts from
+ - blogs,
+ - news,
+ - and twitter.
+ 
+The application will use various algorithms and techniques to process these 
+texts and provide the most accurate predictions in reasonable time.
+
+First, let's see very high level features of the provided dataset. (My 
+application will work in English thus I will ignore texts provided in different
+languages.)
+
+```{r Data Overview, cache=TRUE}
+fileblog <- file(filePathblog)
+blg <- readLines(con = fileblog, n = -1, warn = FALSE, skipNul = TRUE)
+close(fileblog)
+
+filenews <- file(filePathnews)
+nws <- readLines(con = filenews, n = -1, warn = FALSE, skipNul = TRUE)
+close(filenews)
+
+filetwitter <- file(filePathtwitter)
+twttr <- readLines(con = filetwitter, n = -1, warn = FALSE, skipNul = TRUE)
+close(filetwitter)
+
+fileStat <- data.frame(col1=c("en_US.blogs.txt",
+                              "en_US.news.txt",
+                              "en_US.twitter.txt"),
+                       col2=c(file.info(filePathblog)$size/1024^2,
+                              file.info(filePathnews)$size/1024^2,
+                              file.info(filePathtwitter)$size/1024^2),
+                       col3=c(length(blg)/1000,
+                              length(nws)/1000,
+                              length(twttr)/1000),
+                       col4=c(sum(stri_count_words(blg))/1000000,
+                              sum(stri_count_words(nws))/1000000,
+                              sum(stri_count_words(twttr))/1000000),
+                       col5=c(sum(nchar(blg))/1000000,
+                              sum(nchar(nws))/1000000,
+                              sum(nchar(twttr))/1000000
+                           )
+                       )
+
+colnames(fileStat)  <- c("File Name",
+                         "File Size (MB)",
+                         "Number of lines (K)",
+                         "Number of words (MM)",
+                         "Number of characters (MM)")
+knitr::kable(fileStat)
+```
+
+# Exploratory Analyses
+
+This section focuses on the analysis of content of the text. I use techniques 
+of descriptive statistics to reveal the main attributes of documents.
+
+As it is presented in the previous section, the three files contain almost 
+similar amount of information (see file size, number of words and characters) 
+but still my presumption suggests that the three types of documents have 
+significantly different attributes:
+
+ - Twitter has been built for short form of communication, limited to 140 characters, that suggest each post (i.e. line in the file) consists of few words, expressing consise opinion in a less formal way
+ - content of blogs and news might seem similar from technical point of view (i.e. unlimited, continuous paragraphs) but semantically they can differ significantly. News are mainly published by media organizations presenting fact-based statements about our world in proper languange. Blogs, though, can be edited by professional journalists as well (offering quality content like newspaper) but this platform for creating and publishing content is open for anyone thoughout the world. Therefore blogs tend to reflect personal opinion about particular topics being edited by ordinary people that may result in lower quality in content or language.
+
+## Understanding the role of lines
+
+As a starting point I assume that each line represents a single blog post, 
+article or twitter post. I determine the length of each entry by counting 
+characters and words in them. Doing so, the following distributions are revealed:
+
+```{r EDA - Hist of entry lengths, cache=TRUE, fig.align='center', fig.width=11}
+g.blg <- qplot(x=nchar(blg)[-order(nchar(blg),decreasing = TRUE)[1:1000]], 
+               geom = "histogram",
+               main = "blogs.txt",
+               ylab="",
+               xlab="",
+               binwidth=1)
+g.nws <- qplot(x=nchar(nws)[-order(nchar(nws),decreasing = TRUE)[1:1000]], 
+               geom = "histogram",
+               main = "news.txt",
+               ylab="",
+               xlab="",
+               binwidth=1)
+g.twttr <- qplot(x=nchar(twttr), 
+                 geom = "histogram",
+                 main = "twitter.txt",
+                 ylab="",
+                 xlab="",
+                 binwidth=1)
+grid.arrange(g.blg, 
+             g.nws, 
+             g.twttr, 
+             ncol=3, 
+             top = "Distribution of length of entries (by characters)")
+
+g2.blg <- qplot(x=stri_count_words(blg)[-order(stri_count_words(blg),decreasing = TRUE)[1:1000]], 
+               geom = "histogram",
+               main = "blogs.txt",
+               ylab="",
+               xlab="",
+               binwidth=10)
+g2.nws <- qplot(x=stri_count_words(nws)[-order(stri_count_words(nws),decreasing = TRUE)[1:1000]], 
+               geom = "histogram",
+               main = "news.txt",
+               ylab="",
+               xlab="",
+               binwidth=10)
+g2.twttr <- qplot(x=stri_count_words(twttr), 
+                 geom = "histogram",
+                 main = "twitter.txt",
+                 ylab="",
+                 xlab="",
+                 binwidth=1)
+grid.arrange(g2.blg, 
+             g2.nws, 
+             g2.twttr, 
+             ncol=3, 
+             top = "Distribution of length of entries (by words)")
+```
+
+Figures above support my initial presumption that tweets are short messages, 
+their lengths are distributed more or less evenly on the scale of 140 characters.
+However, the distribution observed at blogs and news does not meet my initial 
+preconception as the graphs show several entries consiting of few words only
+(i.e. less than 10) that feels incorrect. By looking at these entries, they 
+proved that my presumption was wrong, they are fragmented texts instead of being
+comprehensive single entries. Thus going forward, it does not make sense to treat
+these lines as representing regular blog posts or articles.
+
+## Words in text
+
+In this section I focus on the most atomic items of the texts, on the words. In 
+order to analyse them, I need to tokenize (break into words) the documents.
+
+Since the texts I need to work with are relatively big files, for analysis 
+purposes I select a random 1% sample of the original dataset.
+
+```{r EDA - Sampling text, cache=TRUE}
+set.seed(1234)
+
+blg.rn <- rbinom(n = length(blg), size=1, prob = 0.1)
+nws.rn <- rbinom(n = length(nws), size=1, prob = 0.1)
+twttr.rn <- rbinom(n = length(twttr), size=1, prob = 0.1)
+
+blg.smpl <- blg[which(blg.rn==1)]
+nws.smpl <- nws[which(nws.rn==1)]
+twttr.smpl <- twttr[which(twttr.rn==1)]
+```
+
+From each sample of the documents I created a single corpus. A corpus is a large 
+and structured set of texts being used to do statistical analysis and hypothesis 
+testing, checking occurrences or validating linguistic rules within a specific 
+language territory. A corpus is designed to be a more or less static container 
+of texts with respect to processing and analysis. This means that the texts in 
+corpus are not designed to be changed internally through (for example) cleaning 
+or pre-processing steps, such as stemming or removing punctuation. Rather, texts 
+can be extracted from the corpus as part of processing, and assigned to new 
+objects, but the idea is that the corpus will remain as an original reference 
+copy so that other analyses – for instance those in which stems and punctuation 
+were required, such as analyzing a reading ease index – can be performed on the 
+same corpus. (via [Wikipedia](https://en.wikipedia.org/wiki/Text_corpus) and 
+[quanteda Quick Start Guide](https://cran.rstudio.com/web/packages/quanteda/vignettes/quickstart.html))
+
+```{r EDA - Creating corpus, cache=TRUE}
+smpl.Corpus <- corpus(c(blg.smpl,nws.smpl,twttr.smpl))
+```
+
+In order to perform statistical analyses on the corpus, features need to be 
+extracted from the texts. The object of document-frequency matrix serves this 
+purpose. In `quanted` the `dfm()` function creates this matrix along with 
+tokenization and data cleaning (i.e. conversion to lower case; stemming words;
+removing numbers, punctuation, separators, stopwords, special characters, etc.)
+
+For my word prediction application I decided to eliminate
+
+ - numbers,
+ - punctuation,
+ - separators and
+ - hashtags.
+
+Also, I converted all words to lower case, kept stopwords and opted stemming out.
+I believe, removing stopwords would decrease my accuracy, since in the framework 
+of "next word prediction" I can not rule out those ones as they are integrant 
+part of any arbitrary text using for communication. Similarily, stemming words 
+might bring more efficiency in the model but would let space for more inaccuracy 
+by predicting the right word in wrong form.
+
+```{r EDA - DFM, cache=TRUE}
+smpl.dfm <- dfm(smpl.Corpus,
+                toLower = TRUE,
+                removeNumbers = TRUE, 
+                removePunct = TRUE, 
+                removeSeparators = TRUE,
+                removeTwitter = FALSE,
+                language="english")
+
+```
+
+Given the document-frequency matrix created, the following main attributes can 
+be observed.
+
+Top 50 words by their frequency of appearance:
+
+```{r EDA - Basic summary, cache=TRUE}
+plot(smpl.dfm, max.words = 50, scale = c(5, .5))
+topfeatures(smpl.dfm, 50)
+```
+
+## N-Grams
+
+```{r}
+smpl.trigram <- dfm(smpl.Corpus,
+                    ngrams=3,
+                    toLower = TRUE,
+                    removeNumbers = TRUE, 
+                    removePunct = TRUE, 
+                    removeSeparators = TRUE,
+                    removeTwitter = FALSE,
+                    language="english")
+smpl.trigram.df <- data.frame(trigram=as.character(names(colSums(smpl.trigram))),
+                              freq=as.numeric(colSums(smpl.trigram)),
+                              stringsAsFactors = FALSE)
+
+
+searchExpr <- function(expr, ngramfreqdf) {
+    expr.t <- gsub(" ","_",expr)
+    
+    matchidx <- grep(paste("^",expr.t,sep = ""),ngramfreqdf[,1])
+    matchdf <- ngramfreqdf[matchidx,]
+    matchdf[order(matchdf[,2], decreasing = TRUE),][1:20,]
+}
+searchExpr("must be",smpl.trigram.df)
+```
+
+# Future plans
+
+In order to step forward my prediction application, I need to study the words in
+wider context instead of single words alone. The real prediction question is, by
+knowing one-two-three already typed word, what, most likely, is the following 
+one? To address this question, I will review certain ngrams in the corpus.
+
+
+
+

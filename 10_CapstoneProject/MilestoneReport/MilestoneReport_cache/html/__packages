@@ -1,0 +1,9 @@
+base
+quanteda
+foreach
+iterators
+doParallel
+stringi
+knitr
+ggplot2
+gridExtra

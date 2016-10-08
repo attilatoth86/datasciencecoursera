@@ -1,0 +1,269 @@
+---
+title: "Milestone Report"
+author: "attila.toth86"
+date: "2 June 2016"
+output: html_document
+---
+
+# Introduction
+
+This document aims to present the most recent achievements in the capstone 
+project of Data Science Specialization offered on Coursera by Johns Hopkins
+University.
+
+The ultimate goal of this project is to create a data application that can 
+predict the next word while typing arbitrary text.
+
+# Goals in the Milestone Report
+
+The goal of this report is to display that working with data have been started 
+and inital analytics have been performed on them. This paper also aims to 
+demonstrate, I am on track with prediction algorithm. 
+
+The document is supposed to explain exploratory analyses and goals for eventual 
+app and algorithm.
+
+The motivation for this milestone is to: 
+
+1. Demonstrate the major features of the dataset 
+2. Create a basic summary statistics
+3. Report any interesting findings so far
+4. Get feedback on plans for creating a prediction algorithm and Shiny app.
+
+```{r Initialization, echo=FALSE, message=FALSE}
+source("f_libraries.R")
+source("f_graphics.R")
+```
+
+# Data Overview
+
+The foundation of the application will be a set of texts provided by the course. 
+They are extracts from
+
+- blogs,
+- news,
+- and twitter.
+ 
+The application will use various algorithms and techniques to process these 
+texts and provide the most accurate predictions in reasonable time.
+
+First, let's take a look at very high level features of the provided dataset. (My 
+application will work on English texts thus I will ignore texts provided in 
+different languages.)
+
+```{r DataOverview, echo=FALSE, warning=FALSE, message=FALSE}
+load("desc.RData")
+
+dataOverview <- data.frame(col1=c("en_US.blogs.txt",
+                                  "en_US.news.txt",
+                                  "en_US.twitter.txt"),
+                           col2=c(round(fileSizeblog,2),
+                                  round(fileSizenews,2),
+                                  round(fileSizetwitter,2)),
+                           col3=c(blogLines.length,
+                                  newsLines.length,
+                                  twitterLines.length),
+                           col4=c(sum(blogLines.wc),
+                                  sum(newsLines.wc),
+                                  sum(twitterLines.wc)),
+                           col5=c(sum(blogLines.chars),
+                                  sum(newsLines.chars),
+                                  sum(twitterLines.chars))
+                           )
+colnames(dataOverview) <- c("File Name", 
+                            "File Size (MB)",
+                            "Number of lines",
+                            "Number of words",
+                            "Number of characters")
+knitr::kable(dataOverview)
+```
+
+# Exploratory Analyis
+
+This section focuses on the analysis of content of the text. I use techniques 
+of descriptive statistics to reveal the main attributes of documents.
+
+As it is presented in the previous section, the three files contain almost 
+similar amount of information (i.e. file size, number of words and characters) 
+but still my presumption is that the three types of documents have 
+significantly different attributes:
+
+Twitter has been built for short form of communication, limited to 140 characters, 
+that suggest each post (i.e. line in the file) consists of few words, expressing 
+consise opinion in a less formal way
+
+Content of blogs and news might seem similar from technical point of view (i.e. 
+unlimited, continuous paragraphs) but semantically they can differ significantly. 
+News are mainly published by media organizations presenting fact-based statements 
+about our world in proper languange. Blogs, though, can be edited by professional 
+journalists as well (offering quality content like newspaper) but this platform 
+for creating and publishing content is open for anyone thoughout the world. 
+Therefore blogs tend to reflect personal opinion about particular topics being 
+edited by ordinary people that may result in lower quality in content or language.
+
+## Understanding the role of lines
+
+As a starting point I assume that each line represents a single blog post, 
+article or twitter post. I determine the length of each entry by counting 
+characters and words in them. Doing so, the following distributions are revealed:
+
+```{r EDA - Hist of entry lengths, fig.align='center', fig.width=11, echo=FALSE}
+grid.arrange(g.blogLines.char, 
+             g.newsLines.char, 
+             g.twitterLines.char, 
+             ncol=3, 
+             top = "Distribution of length of entries (by characters)")
+
+grid.arrange(g.blogLines.wc, 
+             g.newsLines.wc, 
+             g.twitterLines.wc, 
+             ncol=3, 
+             top = "Distribution of length of entries (by words)")
+
+```
+
+Figures above support my initial presumption that tweets are short messages, 
+their lengths are distributed more or less evenly on the scale of 140 characters.
+However, the distributions observed at blogs and news do not meet my initial 
+preconception as the graphs show several entries consiting of few words only
+(i.e. less than 10) that feels incorrect. By looking at these entries, they 
+proved that my presumption was wrong, they are fragmented texts instead of being
+comprehensive single entries. Thus going forward, it does not make sense to treat
+these lines as representing regular blog posts or articles.
+
+## Words in text
+
+```{r EDA - load corpus object, echo=FALSE}
+load("corpusObject.RData", corpusObj <- new.env())
+```
+
+In this section I focus on the words. In order to analyse them, I need to 
+tokenize (break into words) the documents.
+
+Since the texts I need to work with are relatively big files, for analytic 
+purposes I selected a random 10% sample of the original dataset.
+
+I merged the three separate documents into a single corpus. A corpus is a large 
+and structured set of texts being used to do statistical analysis and hypothesis 
+testing, checking occurrences or validating linguistic rules within a specific 
+language territory. A corpus is designed to be a more or less static container 
+of texts with respect to processing and analysis. This means that the texts in 
+corpus are not designed to be changed internally through (for example) cleaning 
+or pre-processing steps, such as stemming or removing punctuation. Rather, texts 
+can be extracted from the corpus as part of processing, and assigned to new 
+objects, but the idea is that the corpus will remain as an original reference 
+copy so that other analyses – for instance those in which stems and punctuation 
+were required, such as analyzing a reading ease index – can be performed on the 
+same corpus. (via [Wikipedia](https://en.wikipedia.org/wiki/Text_corpus) and 
+[quanteda Quick Start Guide](https://cran.rstudio.com/web/packages/quanteda/vignettes/quickstart.html))
+
+In order to perform statistical analyses on the corpus, features need to be 
+extracted from the texts. The object of document-frequency matrix serves this 
+purpose. In `quanted` the `dfm()` function creates this matrix along with 
+tokenization and data cleaning (i.e. conversion to lower case; stemming words;
+removing numbers, punctuation, separators, stopwords, special characters, etc.)
+
+For my word prediction application I decided to eliminate
+
+ - numbers,
+ - punctuation,
+ - separators and
+ - hashtags.
+
+Also, I converted all words to lower case, kept stopwords and opted stemming out.
+I believe, removing stopwords would decrease my accuracy, since in the framework 
+of "next word prediction" I can not rule out those ones as they are integrant 
+part of any arbitrary text using for communication. Similarily, stemming words 
+might bring more efficiency in the model but would let space for more inaccuracy 
+by predicting the right word in wrong form.
+
+Given the document-frequency matrix created, the following main attributes can 
+be observed.
+
+Top 50 words by their frequency of appearance:
+
+```{r EDA - Top 50 words, echo=FALSE}
+top50words <- data.frame(names(topfeatures(corpusObj[["dfm1gram"]], 50)),
+                         topfeatures(corpusObj[["dfm1gram"]], 50),
+                         row.names=NULL)
+
+plotngramfreq(top50words, "Top 50 Words by Frequency","Words", "Frequency")
+```
+
+```{r EDA - Word frequency, echo=FALSE}
+wordFreq <- data.frame(word=names(colSums(corpusObj[["dfm1gram"]])),
+                       freq=colSums(corpusObj[["dfm1gram"]]),
+                       row.names=NULL,
+                       stringsAsFactors = FALSE
+                       )
+wordFreq <- wordFreq[order(wordFreq$freq, decreasing = TRUE),]
+wordFreq$cumfreq <- cumsum(wordFreq$freq)
+wordFreq$total <- sum(wordFreq$freq)
+wordFreq$coverage <- wordFreq$cumfreq/wordFreq$total
+```
+
+Interestingly, **`r sum(wordFreq[wordFreq$freq==1,2])`** words out of 
+**`r nrow(wordFreq)`** occur only once in the sampled text. In order to cover the 
+50% of all word instances in the text, it is sufficient to use the 
+**`r nrow(wordFreq[wordFreq$coverage<=0.5,])`** most frequent words. To cover
+90%, this number is **`r nrow(wordFreq[wordFreq$coverage<=0.9,])`**.
+
+## N-Grams
+
+In the previous chapter, I did some analyses in relation with the words of texts.
+In natural language modeling terminology they are called unigrams. Going forward,
+I will examine further "grams", e.g. bigrams & trigrams as potential candidates 
+for the prediction algorythm.
+
+An n-gram is a contiguous sequence of n items from a given sequence of text or 
+speech. An n-gram of size 1 is referred to as a "unigram"; size 2 is a "bigram" 
+(or, less commonly, a "digram"); size 3 is a "trigram". 
+
+An n-gram model is a type of probabilistic language model for predicting the next 
+item in such a sequence in the form of a (n − 1)–order Markov model. Two benefits 
+of n-gram models (and algorithms that use them) are simplicity and scalability – 
+with larger n, a model can store more context with a well-understood space–time 
+tradeoff, enabling small experiments to scale up efficiently.(via [Wikipedia](https://en.wikipedia.org/wiki/N-gram))
+
+Let's take a look at the most frequent bigrams and trigrams below.
+
+```{r EDA - Top 50 bigrams, echo=FALSE}
+top50bigram <- data.frame(gsub("_"," ",names(topfeatures(corpusObj[["dfm2gram"]], 50))),
+                          topfeatures(corpusObj[["dfm2gram"]], 50),
+                          row.names=NULL)
+
+plotngramfreq(top50bigram, "Top 50 Bigrams by Frequency","Bigrams", "Frequency")
+```
+
+```{r EDA - Top 50 trigrams, echo=FALSE}
+top50trigram <- data.frame(gsub("_"," ",names(topfeatures(corpusObj[["dfm3gram"]], 50))),
+                          topfeatures(corpusObj[["dfm3gram"]], 50),
+                          row.names=NULL)
+
+plotngramfreq(top50trigram, "Top 50 Trigrams by Frequency","Trigrams", "Frequency")
+```
+
+# Future plans
+
+In order to step forward my prediction application, I need to study the words in
+wider context instead of single words alone. The real prediction question is, by
+knowing one-two-three already typed word, what, most likely, is the following 
+one? To address this question, I will review certain ngrams in the corpus.
+
+# Appendix
+
+```{r EDA - Dictionary coverage, eval=FALSE, echo=FALSE}
+plot(wordFreq$coverage, 
+     type = "l", 
+     lwd=3,
+     xlab="Number of words in frequency order",
+     ylab="Dictionary coverage"
+     )
+abline(v = nrow(wordFreq[wordFreq$coverage<=0.9,]), col="red", lwd=2)
+abline(v = nrow(wordFreq[wordFreq$coverage<=0.99,]), col="green", lwd=2)
+
+```
+
+https://lagunita.stanford.edu/c4x/Engineering/CS-224N/asset/slp4.pdf
+http://www.cs-114.org/wp-content/uploads/2015/01/NgramModels.pdf
+https://web.stanford.edu/~jurafsky/slp3/
